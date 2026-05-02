@@ -378,7 +378,7 @@ document.getElementById('updateBtn').addEventListener('click', () => {
 function RefreshZone(i_ridescore, i_speedlimit, i_numlanes, i_facility, i_function, i_roadwidth, i_pavement) {
   const timestamp = Date.now();
   const source = map.getSource('my-vector-source');
-  source.setTiles([`http://digitalocean_ip:3000/update_score/{z}/{x}/{y}?i_ridescore=${i_ridescore}&i_speedlimit=${i_speedlimit}&i_numlanes=${i_numlanes}&i_facility=${i_facility}&i_function=${i_function}&i_roadwidth=${i_roadwidth}&i_pavement=${i_pavement}&ts=${timestamp}`]);
+  source.setTiles([`http://localhost:3000/update_score/{z}/{x}/{y}?i_ridescore=${i_ridescore}&i_speedlimit=${i_speedlimit}&i_numlanes=${i_numlanes}&i_facility=${i_facility}&i_function=${i_function}&i_roadwidth=${i_roadwidth}&i_pavement=${i_pavement}&ts=${timestamp}`]);
   console.log('Refreshed');
 }
 
@@ -404,7 +404,7 @@ map.on('style.load', () => {
 
   map.addSource('my-vector-source', {
     type: 'vector',
-    tiles: ["http://digitalocean_ip:3000/update_score/{z}/{x}/{y}?i_ridescore=4&i_speedlimit=0&i_numlanes=0&i_facility=0&i_function=0&i_roadwidth=0&i_pavement=0"],
+    tiles: ["http://localhost:3000/update_score/{z}/{x}/{y}?i_ridescore=4&i_speedlimit=0&i_numlanes=0&i_facility=0&i_function=0&i_roadwidth=0&i_pavement=0"],
     minzoom: 1, maxzoom: 14
   });
   map.addLayer({
@@ -420,7 +420,7 @@ map.on('style.load', () => {
         map.addSource('points-source', {
 	    type: 'vector',
 	    tiles: [ //set following values to defaults in slider?
-  "http://digitalocean_ip:3000/crashes_dc/{z}/{x}/{y}"
+  "http://localhost:3000/crashes_dc/{z}/{x}/{y}"
 ],
 	    minzoom: 1,
 	    maxzoom: 14
