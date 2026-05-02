@@ -1,0 +1,7 @@
+docs-4-ai/*
+references/*
+.env
+.claude/
+.cursor/
+dev_backup.sql
+pg_data/

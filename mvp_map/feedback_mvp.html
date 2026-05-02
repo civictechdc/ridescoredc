@@ -1,0 +1,3160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>DC Bike Safety — Feedback MVP</title>
+<meta charset='utf-8'>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel='stylesheet' href='https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.css' />
+<script src='https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.js'></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+
+  /* ── Logo ── */
+  #logo-box {
+    position: fixed; top: 12px; right: 12px; z-index: 900;
+    background: #1a1a2e; color: #fff;
+    border-radius: 8px; padding: 6px 12px;
+    display: flex; align-items: center; gap: 7px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    font-size: 12px; font-weight: 600; letter-spacing: .01em;
+    cursor: pointer; border: none; font-family: inherit;
+    transition: background .15s;
+  }
+  #logo-box:hover { background: #2d2d4e; }
+
+  /* ── Attribution panel ── */
+  #attribution-panel {
+    position: fixed; top: 50px; right: 12px; width: 240px;
+    background: #fff; z-index: 800; border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.14); padding: 18px 20px 22px;
+    transform-origin: top right; transform: scale(0); opacity: 0;
+    transition: transform .2s cubic-bezier(.4,0,.2,1), opacity .15s ease;
+    pointer-events: none;
+  }
+  #attribution-panel.open { transform: scale(1); opacity: 1; pointer-events: auto; }
+  #attribution-panel .panel-header { margin: 0 0 14px; font-size: 14px; font-weight: 600; color: #1a1a2e; display: flex; align-items: center; justify-content: space-between; }
+  #attribution-panel .close-btn { background: none; border: none; cursor: pointer; color: #64748b; font-size: 12px; font-weight: 500; padding: 4px 8px; border-radius: 4px; }
+  #attribution-panel p { font-size: 12px; color: #334155; line-height: 1.5; margin: 0; }
+
+  /* ── Controls top-left ── */
+  .controls {
+    position: fixed; top: 12px; left: 12px; z-index: 900;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: 420px;
+  }
+  .ctrl-btn {
+    background: #fff; border: 1px solid #d1d5db; color: #334155;
+    border-radius: 8px; padding: 7px 13px;
+    font: 500 12px/1 'Inter', sans-serif; cursor: pointer;
+    transition: all .15s; display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); user-select: none;
+  }
+  .ctrl-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+  .ctrl-btn svg { width: 14px; height: 14px; }
+
+  /* ── Toggle dot buttons ── */
+  .toggle-btn { position: relative; padding-left: 26px; }
+  .toggle-btn::before {
+    content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; transition: background .15s;
+  }
+  .toggle-btn.active { background: #f0fdf4; border-color: #86efac; color: #166534; }
+  .toggle-btn.active::before { background: #22c55e; }
+
+  /* ── Paint button active state ── */
+  #paintBtn.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+  #paintBtn.active::before { background: #3b82f6; }
+
+  /* ── Settings panel ── */
+  #settings-panel {
+    position: fixed; top: 50px; left: 12px; width: 310px;
+    max-height: calc(100vh - 64px); overflow-y: auto;
+    background: #fff; z-index: 800; border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.14); padding: 18px 20px 22px;
+    transform-origin: top left; transform: scale(0); opacity: 0;
+    transition: transform .2s cubic-bezier(.4,0,.2,1), opacity .15s ease;
+    pointer-events: none;
+  }
+  #settings-panel.open { transform: scale(1); opacity: 1; pointer-events: auto; }
+  #settings-panel .panel-header { margin: 0 0 14px; font-size: 14px; font-weight: 600; color: #1a1a2e; display: flex; align-items: center; justify-content: space-between; }
+  #settings-panel .close-btn { background: none; border: none; cursor: pointer; color: #64748b; font-size: 12px; font-weight: 500; padding: 4px 8px; border-radius: 4px; }
+  #settings-panel .close-btn:hover { background: #f1f5f9; }
+
+  .mode-switcher { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 16px; }
+  .mode-switcher button { flex: 1; padding: 8px 0; font: 500 12px/1 'Inter', sans-serif; border: none; cursor: pointer; background: #fff; color: #64748b; transition: all .15s; }
+  .mode-switcher button.selected { background: #1a1a2e; color: #fff; }
+
+  .slider-group { display: flex; flex-direction: column; gap: 14px; }
+  .slider-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px; transition: opacity .15s; }
+  .slider-row label { font-size: 12px; font-weight: 500; color: #334155; }
+  .slider-row .val { font-size: 11px; font-weight: 600; color: #1a1a2e; text-align: right; min-width: 48px; }
+  .slider-row input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; outline: none; grid-column: 1 / -1; margin-top: 2px; }
+  .slider-row input[type="range"]:disabled { opacity: .3; }
+  .slider-row.disabled { opacity: .35; }
+  .slider-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #1a1a2e; border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .ridescore-note { font-size: 11px; color: #64748b; line-height: 1.4; margin-bottom: 4px; padding: 8px 10px; background: #f8fafc; border-radius: 6px; }
+  #updateBtn { margin-top: 16px; width: 100%; padding: 10px; border: none; border-radius: 6px; background: #1a1a2e; color: #fff; font: 600 13px/1 'Inter', sans-serif; cursor: pointer; }
+  #updateBtn:hover { background: #2d2d4e; }
+
+  /* ── Map ── */
+  #map { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+
+  /* ── Popup ── */
+  .maplibregl-popup { max-width: 320px; font: 12px/18px 'Inter', sans-serif; }
+  .maplibregl-popup-content { padding: 12px 14px; border-radius: 8px; }
+
+  /* ────────────────────────────────────────────
+     FEEDBACK / PAINT MODE
+  ──────────────────────────────────────────── */
+
+  /* Paint canvas — sits above map, captures events only when paint mode is on */
+  #paint-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 500;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  /* Hint strip shown while paint mode is active */
+  #paint-hint {
+    position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+    background: rgba(29, 78, 216, 0.88); color: #fff;
+    border-radius: 8px; padding: 9px 16px;
+    font: 500 12px/1 'Inter', sans-serif;
+    pointer-events: none; z-index: 600;
+    opacity: 0; transition: opacity .2s ease;
+    white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,.2);
+  }
+  #paint-hint.visible { opacity: 1; }
+
+  #refine-hint {
+    position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+    background: rgba(234, 88, 12, 0.92); color: #fff;
+    border-radius: 8px; padding: 9px 16px;
+    font: 500 12px/1.35 'Inter', sans-serif;
+    pointer-events: none; z-index: 600;
+    opacity: 0; transition: opacity .2s ease;
+    max-width: min(420px, 92vw); text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,.2);
+  }
+  #refine-hint.visible { opacity: 1; }
+
+  #refine-toolbar {
+    position: fixed; bottom: 168px; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; gap: 10px; z-index: 610;
+    background: rgba(255,255,255,.96); border: 1px solid #fed7aa;
+    border-radius: 10px; padding: 8px 14px; box-shadow: 0 2px 12px rgba(0,0,0,.12);
+    font: 500 12px/1.35 'Inter', sans-serif; color: #431407;
+  }
+  #refine-toolbar.visible { display: flex; }
+  #refine-toolbar button {
+    border: none; border-radius: 8px; padding: 7px 14px;
+    font: 600 12px 'Inter', sans-serif; cursor: pointer; background: #fff7ed;
+    color: #9a3412; border: 1px solid #fdba74;
+  }
+  #refine-toolbar button:hover:not(:disabled) { background: #ffedd5; }
+  #refine-toolbar button:disabled { opacity: .45; cursor: default; }
+
+  #refineBtn.active { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
+  #refineBtn.active::before { background: #ea580c; }
+
+  /* Selection badge — bottom-centre, appears when ≥1 segment selected */
+  #selection-badge {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1d4ed8; color: #fff;
+    border-radius: 999px; padding: 9px 8px 9px 16px;
+    font: 600 13px/1 'Inter', sans-serif;
+    z-index: 900; display: none; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(29,78,216,.4);
+    white-space: nowrap;
+  }
+  #badge-count { opacity: .9; }
+  .badge-btn {
+    border: none; border-radius: 999px; padding: 5px 13px;
+    font: 600 12px/1 'Inter', sans-serif; cursor: pointer; transition: all .15s;
+  }
+  #badge-clear { background: rgba(255,255,255,.2); color: #fff; }
+  #badge-clear:hover { background: rgba(255,255,255,.3); }
+  #badge-undo { background: rgba(255,255,255,.15); color: #fff; }
+  #badge-undo:hover { background: rgba(255,255,255,.28); }
+  #badge-undo:disabled { opacity: .35; cursor: default; }
+  #badge-undo-stroke { background: rgba(255,255,255,.12); color: #fff; }
+  #badge-undo-stroke:hover { background: rgba(255,255,255,.22); }
+  #badge-undo-stroke:disabled { opacity: .35; cursor: default; }
+  #badge-rate { background: #fff; color: #1d4ed8; }
+  #badge-rate:hover { background: #eff6ff; }
+
+  /* Survey panel — slides in from right */
+  #survey-panel {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 360px;
+    background: #fff; z-index: 1000;
+    box-shadow: -4px 0 24px rgba(0,0,0,.15);
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+  }
+  #survey-panel.open { transform: translateX(0); }
+
+  .survey-header {
+    position: sticky; top: 0; background: #fff; z-index: 10;
+    padding: 20px 20px 14px; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .survey-header h2 { margin: 0; font-size: 15px; font-weight: 600; color: #1a1a2e; line-height: 1.3; }
+  .survey-header p { margin: 4px 0 0; font-size: 11px; color: #64748b; }
+
+  .survey-lts-callout {
+    font: 400 11px/1.45 'Inter', sans-serif; color: #334155;
+    background: #f0f7ff; border-left: 4px solid #1d4ed8;
+    border-radius: 0 8px 8px 0; padding: 10px 12px; margin: -4px 0 0;
+  }
+  .survey-lts-summary {
+    font: 500 11px/1.45 'Inter', sans-serif; color: #1e3a5f;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 10px 12px; margin: 0;
+  }
+  .survey-lts-summary--warn { color: #92400e; background: #fffbeb; border-color: #fcd34d; }
+
+  .survey-section-label {
+    font: 700 10px/1.2 'Inter', sans-serif; letter-spacing: .06em;
+    text-transform: uppercase; color: #1d4ed8; margin-bottom: 6px;
+  }
+
+  .lts-pick-grid { display: flex; flex-direction: column; gap: 6px; }
+  .lts-pick-btn {
+    text-align: left; padding: 8px 10px; border-radius: 8px;
+    border: 2px solid #e2e8f0; background: #fff;
+    font: 500 12px/1.35 'Inter', sans-serif; color: #1a1a2e;
+    cursor: pointer; transition: all .15s;
+  }
+  .lts-pick-persona { display: block; font: 600 13px/1.35 'Inter', sans-serif; margin-bottom: 2px; }
+  .lts-pick-btn small { display: block; font: 400 10px/1.35 'Inter', sans-serif; color: #64748b; margin-top: 2px; }
+  .lts-pick-btn:hover { border-color: #93c5fd; }
+  .lts-pick-btn.selected { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+  .lts-pick-btn.selected small { color: #3b82f6; }
+
+  .map-cal-stack { display: flex; flex-direction: column; gap: 6px; }
+  .map-cal-btn {
+    width: 100%; text-align: left; padding: 9px 10px; border-radius: 8px;
+    border: 2px solid #e2e8f0; background: #fff;
+    font: 500 11px/1.4 'Inter', sans-serif; color: #334155;
+    cursor: pointer; transition: all .15s;
+  }
+  .map-cal-btn:hover { border-color: #93c5fd; }
+  .map-cal-btn.selected { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+
+  .survey-q.optional-block label.q-label { color: #64748b; }
+  .survey-close { background: none; border: none; cursor: pointer; color: #64748b; font-size: 20px; line-height: 1; padding: 0 0 0 12px; flex-shrink: 0; }
+  .survey-close:hover { color: #1a1a2e; }
+
+  .survey-body { padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+
+  .survey-q label.q-label { display: block; font: 600 12px/1.4 'Inter'; color: #1a1a2e; margin-bottom: 12px; }
+  .survey-q .q-hint { font: 400 11px/1.4 'Inter'; color: #64748b; margin-top: -8px; margin-bottom: 12px; display: block; }
+
+  /* Rating buttons 1–5 */
+  .rating-row { display: flex; gap: 8px; }
+  .rating-btn {
+    flex: 1; padding: 10px 0; border-radius: 8px;
+    border: 2px solid #e2e8f0; background: #fff;
+    font: 700 15px/1 'Inter'; color: #64748b;
+    cursor: pointer; transition: all .15s; text-align: center;
+  }
+  .rating-btn:hover { border-color: #93c5fd; color: #1d4ed8; }
+  .rating-btn.selected { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+  .rating-labels { display: flex; justify-content: space-between; font: 10px 'Inter'; color: #94a3b8; margin-top: 4px; }
+
+  /* Checkboxes */
+  .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .check-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border: 1px solid #e2e8f0;
+    border-radius: 7px; cursor: pointer;
+    font: 500 11px/1.3 'Inter'; color: #334155;
+    transition: all .15s; user-select: none;
+  }
+  .check-item:hover { border-color: #93c5fd; background: #f8fafc; }
+  .check-item input { accent-color: #1d4ed8; width: 14px; height: 14px; flex-shrink: 0; }
+  .check-item.checked { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+
+  /* Time of day */
+  .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .time-btn {
+    padding: 9px; border: 2px solid #e2e8f0; border-radius: 8px;
+    background: #fff; font: 500 12px/1.3 'Inter'; color: #334155;
+    cursor: pointer; transition: all .15s; text-align: center;
+  }
+  .time-btn:hover { border-color: #93c5fd; }
+  .time-btn.selected { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+
+  .traffic-vol-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .traffic-vol-btn {
+    padding: 9px; border: 2px solid #e2e8f0; border-radius: 8px;
+    background: #fff; font: 500 12px/1.3 'Inter'; color: #334155;
+    cursor: pointer; transition: all .15s; text-align: center;
+  }
+  .traffic-vol-btn:hover { border-color: #93c5fd; }
+  .traffic-vol-btn.selected { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+
+  /* Textarea */
+  .survey-textarea {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 10px 12px; font: 13px/1.5 'Inter'; color: #334155;
+    resize: none; outline: none; transition: border .15s;
+  }
+  .survey-textarea:focus { border-color: #93c5fd; }
+
+  /* Submit */
+  #survey-submit {
+    width: 100%; padding: 13px; border: none; border-radius: 8px;
+    background: #1a1a2e; color: #fff;
+    font: 600 13px/1 'Inter'; cursor: pointer; transition: background .15s;
+    margin-top: 4px;
+  }
+  #survey-submit:hover { background: #2d2d4e; }
+  #survey-submit:disabled { background: #94a3b8; cursor: default; }
+
+  /* Submission confirmation */
+  #survey-confirm {
+    display: none; flex-direction: column; align-items: center;
+    padding: 48px 24px; text-align: center; gap: 12px;
+  }
+  #survey-confirm .confirm-icon { font-size: 40px; }
+  #survey-confirm h3 { margin: 0; font-size: 16px; color: #1a1a2e; }
+  #survey-confirm p { margin: 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+  #survey-confirm button { margin-top: 8px; padding: 10px 24px; border: none; border-radius: 8px; background: #1a1a2e; color: #fff; font: 600 13px 'Inter'; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- ── Logo ── -->
+<button id="logo-box" onclick="toggleAttribution()">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/></svg>
+  DC Bike Safety
+</button>
+
+<!-- ── Attribution ── -->
+<div id="attribution-panel">
+  <div class="panel-header">Data Sources
+    <button class="close-btn" onclick="toggleAttribution()">Close &times;</button>
+  </div>
+  <p>Road and crash data from <strong>Washington D.C. Government</strong>, licensed under <strong>CC-BY-4.0</strong>.</p>
+</div>
+
+<!-- ── Controls ── -->
+<div class="controls">
+  <button class="ctrl-btn" id="settingsBtn" onclick="toggleSettings()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </button>
+  <button class="ctrl-btn toggle-btn" id="imageryBtn" onclick="toggleImagery()">Imagery</button>
+  <button class="ctrl-btn toggle-btn" id="accidentsBtn" onclick="toggleAccidents()">Accidents</button>
+  <button class="ctrl-btn toggle-btn" id="paintBtn" onclick="togglePaintMode()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+    Paint Route
+  </button>
+  <button class="ctrl-btn toggle-btn" id="refineBtn" type="button" onclick="toggleRefineMode()" title="Drag handles to reshape; release commits. Esc cancels refine. Click again to exit refine and keep edits.">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="3"/><circle cx="15" cy="12" r="3"/><path d="M9 12h6M12 9v6"/></svg>
+    Refine route
+  </button>
+  <button class="ctrl-btn" id="refine-debug-seed-btn" type="button" style="display:none" onclick="refineDebugSeedNearCenter(10)" title="Requires ?refineDebug=1 or localStorage refineDebug=1">Seed test route</button>
+  <button class="ctrl-btn refine-test-btn" type="button" style="display:none;font-size:11px;padding:5px 8px" id="refine-test-extend" onclick="refineTest_scenarioExtendEnd()" title="Programmatic: nudge last handle screen +E (extend)">T extend</button>
+  <button class="ctrl-btn refine-test-btn" type="button" style="display:none;font-size:11px;padding:5px 8px" id="refine-test-right" onclick="refineTest_scenarioRightTurnMid()" title="Programmatic: nudge mid handle SE (corner)">T right</button>
+  <button class="ctrl-btn refine-test-btn" type="button" style="display:none;font-size:11px;padding:5px 8px" id="refine-test-shrink" onclick="refineTest_scenarioShrinkEnd()" title="Programmatic: nudge last handle toward first (retract)">T shrink</button>
+</div>
+
+<!-- ── Settings panel ── -->
+<div id="settings-panel">
+  <div class="panel-header">Your Priority
+    <button class="close-btn" onclick="toggleSettings()">Close &times;</button>
+  </div>
+  <div class="mode-switcher">
+    <button id="mode-ridescore" class="selected" onclick="setMode('ridescore')">Use RideScore</button>
+    <button id="mode-custom" onclick="setMode('custom')">Custom</button>
+  </div>
+  <div class="ridescore-note" id="ridescore-note">Using the pre-computed safety score. Switch to Custom to tune individual weights.</div>
+  <div class="slider-group">
+    <div class="slider-row disabled" id="row_speedlimit"><label>Speed Limit</label><span class="val" id="v_speedlimit">Medium</span><input type="range" min="0" max="3" value="2" id="i_speedlimit" disabled oninput="updateLabel('v_speedlimit',this.value)"></div>
+    <div class="slider-row disabled" id="row_numlanes"><label>Number of Lanes</label><span class="val" id="v_numlanes">Medium</span><input type="range" min="0" max="3" value="2" id="i_numlanes" disabled oninput="updateLabel('v_numlanes',this.value)"></div>
+    <div class="slider-row disabled" id="row_facility"><label>Bike Lane Type</label><span class="val" id="v_facility">Medium</span><input type="range" min="0" max="3" value="2" id="i_facility" disabled oninput="updateLabel('v_facility',this.value)"></div>
+    <div class="slider-row disabled" id="row_function"><label>Road Type</label><span class="val" id="v_function">Medium</span><input type="range" min="0" max="3" value="2" id="i_function" disabled oninput="updateLabel('v_function',this.value)"></div>
+    <div class="slider-row disabled" id="row_roadwidth"><label>Road Width</label><span class="val" id="v_roadwidth">Medium</span><input type="range" min="0" max="3" value="2" id="i_roadwidth" disabled oninput="updateLabel('v_roadwidth',this.value)"></div>
+    <div class="slider-row disabled" id="row_pavement"><label>Pavement Condition</label><span class="val" id="v_pavement">Medium</span><input type="range" min="0" max="3" value="2" id="i_pavement" disabled oninput="updateLabel('v_pavement',this.value)"></div>
+  </div>
+  <button id="updateBtn">Update Map</button>
+</div>
+
+<!-- ── Paint canvas (sits above map, pointer-events toggled by paint mode) ── -->
+<canvas id="paint-canvas"></canvas>
+
+<!-- ── Paint hint strip ── -->
+<div id="paint-hint">Draw along your route — segments confirm after a short lookahead. <strong>Alt+drag</strong> erases. Undo or tap a blue road to fix.</div>
+
+<div id="refine-hint">Orange dots snap to <strong>road line endpoints</strong>. Drag updates the <strong>blue selection live</strong>; <strong>release</strong> to finish that edit. <strong>Esc</strong> abandons refine and restores the route from when you opened refine.</div>
+
+<div id="refine-toolbar">
+  <button type="button" id="refine-undo-btn" onclick="refineUndoLast()" disabled>Undo last refine</button>
+  <span id="refine-undo-meta" style="font-size:11px;color:#78716c">No refine steps yet</span>
+</div>
+
+<!-- ── Selection badge ── -->
+<div id="selection-badge">
+  <span id="badge-count">0 segments</span>
+  <button class="badge-btn" id="badge-undo" type="button" disabled onclick="undoLastSegment()" title="Undo last segment (Ctrl+Z)">Undo</button>
+  <button class="badge-btn" id="badge-undo-stroke" type="button" disabled onclick="undoLastPaintStroke()" title="Undo the last completed paint stroke (batch)">Undo stroke</button>
+  <button class="badge-btn" id="badge-clear" onclick="clearSelection()">Clear</button>
+  <button class="badge-btn" id="badge-rate" onclick="openSurveyPanel()">Rate route →</button>
+</div>
+
+<!-- ── Survey panel ── -->
+<div id="survey-panel">
+  <div class="survey-header">
+    <div>
+      <h2>Level of traffic stress (LTS)</h2>
+      <p id="survey-subtitle">Feedback on <span id="survey-seg-count">0</span> painted segment(s) for the stress model</p>
+    </div>
+    <button class="survey-close" onclick="closeSurveyPanel()">&times;</button>
+  </div>
+
+  <div class="survey-body" id="survey-form-body">
+
+    <p class="survey-lts-callout">
+      Your answers calibrate how well map colors match real riding stress. If segments differ a lot, answer for the <strong>overall route</strong> or the <strong>worst stretch</strong> — whichever you are thinking of consistently.
+    </p>
+
+    <p id="survey-lts-model-summary" class="survey-lts-summary" aria-live="polite"></p>
+
+    <div class="survey-q">
+      <div class="survey-section-label">Critical — how this route felt</div>
+      <label class="q-label">Was this route appropriate for:</label>
+      <span class="q-hint">Pick the single best fit. Your choice maps to LTS 1–4 for the stress model.</span>
+      <div class="lts-pick-grid" id="lts-pick-grid">
+        <button type="button" class="lts-pick-btn" data-lts="1" onclick="setPerceivedLts(1)">
+          <span class="lts-pick-persona">Beginners and children</span>
+          <small>LTS 1 — Strong separation from almost all traffic; simple crossings; suitable for children.</small>
+        </button>
+        <button type="button" class="lts-pick-btn" data-lts="2" onclick="setPerceivedLts(2)">
+          <span class="lts-pick-persona">Casual adults</span>
+          <small>LTS 2 — Own space away from higher-speed and multilane traffic except at crossings; comfortable for most adults (including interested-but-concerned riders).</small>
+        </button>
+        <button type="button" class="lts-pick-btn" data-lts="3" onclick="setPerceivedLts(3)">
+          <span class="lts-pick-persona">Confident riders</span>
+          <small>LTS 3 — Moderate-speed or multilane interaction, or close to higher-speed traffic; enthused and confident riders.</small>
+        </button>
+        <button type="button" class="lts-pick-btn" data-lts="4" onclick="setPerceivedLts(4)">
+          <span class="lts-pick-persona">Strong and fearless</span>
+          <small>LTS 4 — High-speed traffic interaction or very close to fast traffic; only very assertive riders.</small>
+        </button>
+      </div>
+    </div>
+
+    <div class="survey-q">
+      <div class="survey-section-label">Critical — map vs your ride</div>
+      <label class="q-label">Compared to the LTS colors on the map for these segments…</label>
+      <div class="map-cal-stack" id="map-cal-stack">
+        <button type="button" class="map-cal-btn" data-cal="too_optimistic" onclick="setMapLtsCalib('too_optimistic')">
+          I felt <strong>more</strong> stressed than the map suggested
+        </button>
+        <button type="button" class="map-cal-btn" data-cal="about_right" onclick="setMapLtsCalib('about_right')">
+          The map matched my stress about <strong>right</strong>
+        </button>
+        <button type="button" class="map-cal-btn" data-cal="too_pessimistic" onclick="setMapLtsCalib('too_pessimistic')">
+          I felt <strong>less</strong> stressed than the map suggested
+        </button>
+      </div>
+    </div>
+
+    <div class="survey-q">
+      <label class="q-label">When did you ride this route?</label>
+      <div class="time-grid" id="time-grid">
+        <button class="time-btn" data-val="Morning" onclick="setTime('Morning')">🌅 Morning<br><small>6am–12pm</small></button>
+        <button class="time-btn" data-val="Afternoon" onclick="setTime('Afternoon')">☀️ Afternoon<br><small>12pm–5pm</small></button>
+        <button class="time-btn" data-val="Evening" onclick="setTime('Evening')">🌆 Evening<br><small>5pm–9pm</small></button>
+        <button class="time-btn" data-val="Night" onclick="setTime('Night')">🌙 Night<br><small>9pm–6am</small></button>
+      </div>
+    </div>
+
+    <div class="survey-q">
+      <label class="q-label">What drove stress on this route?</label>
+      <span class="q-hint">Select all that apply (aligned with LTS inputs)</span>
+      <div class="check-grid" id="factors-grid">
+        <label class="check-item"><input type="checkbox" value="Motor traffic speed"> Motor traffic speed</label>
+        <label class="check-item"><input type="checkbox" value="Motor traffic volume"> Motor traffic volume</label>
+        <label class="check-item"><input type="checkbox" value="Number of motor lanes"> Number of motor lanes</label>
+        <label class="check-item"><input type="checkbox" value="Little separation from traffic"> Little separation from traffic</label>
+        <label class="check-item"><input type="checkbox" value="Intersections or crossings"> Intersections or crossings</label>
+        <label class="check-item"><input type="checkbox" value="Door zone or parking-adjacent"> Door zone or parking-adjacent</label>
+        <label class="check-item"><input type="checkbox" value="Bike lane or path blocked"> Bike lane or path blocked</label>
+        <label class="check-item"><input type="checkbox" value="Map bike facility did not match ground"> Map bike facility did not match ground</label>
+      </div>
+    </div>
+
+    <div class="survey-q optional-block">
+      <label class="q-label">Optional: overall comfort (1–5)</label>
+      <span class="q-hint">Not required — adds a simple numeric alongside LTS</span>
+      <div class="rating-row" id="rating-row">
+        <button type="button" class="rating-btn" data-val="1" onclick="setRating(1)">1</button>
+        <button type="button" class="rating-btn" data-val="2" onclick="setRating(2)">2</button>
+        <button type="button" class="rating-btn" data-val="3" onclick="setRating(3)">3</button>
+        <button type="button" class="rating-btn" data-val="4" onclick="setRating(4)">4</button>
+        <button type="button" class="rating-btn" data-val="5" onclick="setRating(5)">5</button>
+      </div>
+      <div class="rating-labels"><span>Very uncomfortable</span><span>Very comfortable</span></div>
+    </div>
+
+    <div class="survey-q">
+      <label class="q-label">Perceived motor traffic on this ride <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+      <span class="q-hint">Rough sense of density — helps interpret time of day</span>
+      <div class="traffic-vol-grid" id="traffic-vol-grid">
+        <button type="button" class="traffic-vol-btn" data-val="low" onclick="setTrafficVol('low')">Low</button>
+        <button type="button" class="traffic-vol-btn" data-val="medium" onclick="setTrafficVol('medium')">Medium</button>
+        <button type="button" class="traffic-vol-btn" data-val="high" onclick="setTrafficVol('high')">High</button>
+      </div>
+    </div>
+
+    <!-- Comments -->
+    <div class="survey-q">
+      <label class="q-label">Any other comments? <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+      <textarea class="survey-textarea" id="survey-comments" rows="3" maxlength="500"
+        placeholder="Describe your experience…"></textarea>
+    </div>
+
+    <button id="survey-submit" onclick="submitFeedback()" disabled>Submit feedback</button>
+  </div>
+
+  <!-- Confirmation screen (shown after submit) -->
+  <div id="survey-confirm">
+    <div class="confirm-icon">🙏</div>
+    <h3>Thanks for your feedback!</h3>
+    <p>Your response has been recorded for <strong id="confirm-count">0</strong> road segments.</p>
+    <p style="margin-top:4px;font-size:11px;color:#94a3b8">Open browser console to see the submitted payload.</p>
+    <button onclick="resetAfterSubmit()">Done</button>
+  </div>
+</div>
+
+<!-- ── Map ── -->
+<div id="map"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   EXISTING MAP CONTROLS
+════════════════════════════════════════════════════════ */
+const LABELS = ['Off', 'Low', 'Medium', 'High'];
+function updateLabel(spanId, val) {
+  document.getElementById(spanId).textContent = LABELS[val];
+}
+
+let currentMode = 'ridescore';
+const sliderIds = ['speedlimit','numlanes','facility','function','roadwidth','pavement'];
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-ridescore').classList.toggle('selected', mode === 'ridescore');
+  document.getElementById('mode-custom').classList.toggle('selected', mode === 'custom');
+  document.getElementById('ridescore-note').style.display = mode === 'ridescore' ? 'block' : 'none';
+  sliderIds.forEach(id => {
+    document.getElementById('row_' + id).classList.toggle('disabled', mode === 'ridescore');
+    document.getElementById('i_' + id).disabled = mode === 'ridescore';
+  });
+}
+
+let settingsOpen = false;
+function toggleSettings() {
+  settingsOpen = !settingsOpen;
+  document.getElementById('settings-panel').classList.toggle('open', settingsOpen);
+}
+
+let attributionOpen = false;
+function toggleAttribution() {
+  attributionOpen = !attributionOpen;
+  document.getElementById('attribution-panel').classList.toggle('open', attributionOpen);
+}
+
+let imageryOn = false;
+function toggleImagery() {
+  imageryOn = !imageryOn;
+  document.getElementById('imageryBtn').classList.toggle('active', imageryOn);
+  map.setLayoutProperty('ortho-2025-layer', 'visibility', imageryOn ? 'visible' : 'none');
+}
+
+let accidentsOn = false;
+function toggleAccidents() {
+  accidentsOn = !accidentsOn;
+  document.getElementById('accidentsBtn').classList.toggle('active', accidentsOn);
+  map.setLayoutProperty('crashes_dc_heatmap', 'visibility', accidentsOn ? 'visible' : 'none');
+  map.setLayoutProperty('crashes_dc', 'visibility', accidentsOn ? 'visible' : 'none');
+}
+
+document.getElementById('updateBtn').addEventListener('click', () => {
+  if (currentMode === 'ridescore') {
+    RefreshZone(4, 0, 0, 0, 0, 0, 0);
+  } else {
+    RefreshZone(0,
+      document.getElementById('i_speedlimit').value,
+      document.getElementById('i_numlanes').value,
+      document.getElementById('i_facility').value,
+      document.getElementById('i_function').value,
+      document.getElementById('i_roadwidth').value,
+      document.getElementById('i_pavement').value
+    );
+  }
+});
+
+function RefreshZone(i_ridescore, i_speedlimit, i_numlanes, i_facility, i_function, i_roadwidth, i_pavement) {
+  const ts = Date.now();
+  map.getSource('segments').setTiles([
+    `http://localhost:3000/update_score_v2/{z}/{x}/{y}?i_ridescore=${i_ridescore}&i_speedlimit=${i_speedlimit}&i_numlanes=${i_numlanes}&i_facility=${i_facility}&i_function=${i_function}&i_roadwidth=${i_roadwidth}&i_pavement=${i_pavement}&ts=${ts}`
+  ]);
+}
+
+/* ════════════════════════════════════════════════════════
+   REFINE / STROKE STATE (declared before map — used in style.load)
+════════════════════════════════════════════════════════ */
+let refineMode = false;
+/** @type {{ handles: { lng: number, lat: number }[] }[]} One entry per continuous chain (disjoint paint → multiple paths). */
+let refinePaths = [];
+/**
+ * @type {{ pathIdx: number, handleIdx: number, frozenHandles: { lng: number, lat: number }[] } | null}
+ * Only `handleIdx` is edited during the gesture; others stay at `frozenHandles` until pointer-up commit.
+ */
+let refineDrag = null;
+/** @type {Map|null} snapshot of selectedSegments when refine started (Esc restores this) */
+let refineSnapshot = null;
+/** Snapshot before the current handle drag — pushed to undo on release if the route changed. */
+let refinePreDragSnapshot = null;
+let refineGestureMoved = false;
+/** @type {Array<{ segments: Map, stroke: number[] }>} */
+let refineUndoStack = [];
+const REFINE_UNDO_MAX = 24;
+let refinePointerUpBound = null;
+let lastPointerAlt = false;
+/** Commit order along route (deduped adjacent). */
+let strokeOrderedSegmentIds = [];
+const strokeBatchesHistory = [];
+const AVOID_REVISIT_MULT = 1.14;
+/** Break refine into separate polylines when the stitched chain jumps farther than this (m). */
+const REFINE_GAP_BREAK_M = 200;
+/** Vertex is a drag handle if the bend here exceeds this (degrees). */
+const REFINE_MIN_TURN_DEG = 20;
+/** Along a nearly straight run between corners, add a handle every this many meters. */
+const REFINE_STRAIGHT_SUBDIV_M = 168;
+/** Corners closer than this along the stitched chain (m) collapse to one handle (same junction cluster). */
+const REFINE_CORNER_MERGE_RUN_M = 38;
+/** Stitch / duplicate vertices closer than this (m) are merged before corner detection (reduces dot piles). */
+const REFINE_CHAIN_VERTEX_MERGE_M = 0.55;
+/** After snapping handles to MVT edges, merge consecutive handles closer than this (m) for display. */
+const REFINE_HANDLE_POST_SNAP_DEDUPE_M = 2.2;
+/**
+ * Chord resampling picks the nearest MVT edge per sample. At crossings, isotropic snap flips
+ * between arms sample-to-sample → every intersection branch joins the selection. Hysteresis
+ * keeps the **previous segment** unless another candidate is clearly closer (px slack).
+ */
+const REFINE_COLLECT_HYSTERESIS_PX = 22;
+/** Preview leg: prefer chain points near prior handle arclength vs globally closest (parallel / folded chains). */
+const REFINE_PREVIEW_LEG_ARCLEN_PAD_M = 110;
+const REFINE_PREVIEW_LEG_ARCLEN_PER_CHORD = 5.2;
+const REFINE_PREVIEW_BRANCH_HYST_PX = 14;
+const REFINE_CHORD_SAMPLE_STEP_M = 10;
+const REFINE_CHORD_MAX_STEPS = 48;
+const REFINE_CHORD_MIN_STEPS = 14;
+
+/* ════════════════════════════════════════════════════════
+   MAP INIT
+════════════════════════════════════════════════════════ */
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/bright',
+  center: [-77.02515, 38.91668],
+  zoom: 15
+});
+
+map.on('style.load', () => {
+
+  /* ── Satellite imagery ── */
+  map.addSource('dc-ortho-2025', {
+    type: 'raster',
+    tiles: ['https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Ortho2025_WebMercator/MapServer/tile/{z}/{y}/{x}'],
+    tileSize: 256
+  });
+  map.addLayer({ id: 'ortho-2025-layer', type: 'raster', source: 'dc-ortho-2025', layout: { visibility: 'none' } });
+
+  /* ── Road segments source (v2 — includes ogc_fid for feature-state) ── */
+  map.addSource('segments', {
+    type: 'vector',
+    tiles: ['http://localhost:3000/update_score_v2/{z}/{x}/{y}?i_ridescore=4&i_speedlimit=0&i_numlanes=0&i_facility=0&i_function=0&i_roadwidth=0&i_pavement=0'],
+    promoteId: { 'update_score_v2': 'ogc_fid' },
+    minzoom: 1,
+    maxzoom: 14
+  });
+
+  /* ── Score gradient layer ── */
+  map.addLayer({
+    id: 'road-score',
+    type: 'line',
+    source: 'segments',
+    'source-layer': 'update_score_v2',
+    paint: {
+      'line-color': ['interpolate', ['linear'], ['get', 'user_score'],
+        0, '#CC3232', 50, '#E7B416', 100, '#2DC937'],
+      'line-width': 3
+    }
+  });
+
+  /* ── Selection highlight layer (blue, shown via feature-state) ── */
+  map.addLayer({
+    id: 'road-selected',
+    type: 'line',
+    source: 'segments',
+    'source-layer': 'update_score_v2',
+    paint: {
+      'line-color': '#2563eb',
+      'line-width': 6,
+      'line-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], 1,
+        ['boolean', ['feature-state', 'pending'], false], 0.48,
+        0
+      ]
+    }
+  });
+
+  map.addSource('route-refine-preview', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'route-refine-preview-line',
+    type: 'line',
+    source: 'route-refine-preview',
+    layout: {
+      visibility: 'none',
+      'line-cap': 'round',
+      'line-join': 'round'
+    },
+    paint: {
+      'line-color': '#fb923c',
+      'line-width': 4,
+      'line-opacity': 0.92,
+      'line-dasharray': [3, 2]
+    }
+  });
+
+  map.addSource('route-refine-handles', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] }
+  });
+  map.addLayer({
+    id: 'route-refine-handles',
+    type: 'circle',
+    source: 'route-refine-handles',
+    paint: {
+      'circle-radius': 11,
+      'circle-color': '#ea580c',
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#fff'
+    },
+    layout: { visibility: 'none' }
+  });
+
+  map.on('click', 'road-selected', (e) => {
+    if (paintMode || refineMode) return;
+    const f = e.features[0];
+    const featureId = f.id !== undefined ? f.id : f.properties.ogc_fid;
+    if (featureId === undefined || featureId === null) return;
+    if (selectedSegments.has(featureId)) {
+      removeSegmentSelection(featureId);
+    }
+  });
+
+  /* ── Crash points source ── */
+  map.addSource('crashes', {
+    type: 'vector',
+    tiles: ['http://localhost:3000/crashes_dc/{z}/{x}/{y}'],
+    minzoom: 1, maxzoom: 14
+  });
+  map.addLayer({
+    id: 'crashes_dc', type: 'circle', source: 'crashes', 'source-layer': 'crashes_dc',
+    minzoom: 15,
+    paint: { 'circle-radius': 4, 'circle-color': '#CC3232', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-opacity': 0.7 },
+    layout: { visibility: 'none' }
+  });
+  map.addLayer({
+    id: 'crashes_dc_heatmap', type: 'heatmap', source: 'crashes', 'source-layer': 'crashes_dc',
+    layout: { visibility: 'none' },
+    paint: {
+      'heatmap-weight': ['interpolate', ['linear'], ['+', ['get', 'MAJORINJURIES_BICYCLIST'], ['*', ['get', 'FATAL_BICYCLIST'], 5]], 0, 0, 20, 1],
+      'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
+      'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(33,102,172,0)', 0.2, 'rgb(103,169,207)', 0.4, 'rgb(209,229,240)', 0.6, 'rgb(253,219,199)', 0.8, 'rgb(239,138,98)', 1, 'rgb(178,24,43)'],
+      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 9, 3, 15, 15],
+      'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 0, 0.2, 8, 0.2, 12, 1, 18, 0]
+    }
+  });
+
+  /* ── Popup: road segment ── */
+  map.on('click', 'road-score', (e) => {
+    if (paintMode || refineMode) return;
+    const p = e.features[0].properties;
+    new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`
+      <div style="font-family:'Inter',sans-serif">
+        <strong style="font-size:13px">${p.route_name || 'Unnamed Road'}</strong>
+        <table style="margin-top:6px;font-size:11px;border-collapse:collapse;width:100%">
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Safety Score</td><td><strong>${p.user_score}</strong></td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">RideScore</td><td>${p.ridescore_v1}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">LTS</td><td>${p.lts_level}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Bike Lane</td><td>${p.bike_facility_type}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Speed Limit</td><td>${p.speed_limit_raw} mph</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Lanes</td><td>${p.num_lanes_raw}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Pavement</td><td>${p.pavement_condition}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Segment ID</td><td style="color:#94a3b8">${p.ogc_fid}</td></tr>
+        </table>
+      </div>`).addTo(map);
+  });
+
+  /* ── Popup: crash point ── */
+  map.on('click', 'crashes_dc', (e) => {
+    const p = e.features[0].properties;
+    new maplibregl.Popup({ maxWidth: '400px' }).setLngLat(e.lngLat).setHTML(`
+      <div style="font-family:'Inter',sans-serif">
+        <strong style="font-size:13px">Accident Summary</strong>
+        <table style="margin-top:6px;font-size:11px;border-collapse:collapse;width:100%">
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Address</td><td><strong>${p.address}</strong></td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Date</td><td>${p.reportdate_}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Fatalities</td><td>${p.fatal_bicyclist}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Major injuries</td><td>${p.majorinjuries_bicyclist}</td></tr>
+          <tr><td style="color:#64748b;padding:2px 8px 2px 0">Minor injuries</td><td>${p.minorinjuries_bicyclist}</td></tr>
+        </table>
+      </div>`).addTo(map);
+  });
+
+  map.on('mouseenter', 'road-score', () => {
+    if (paintMode || refineMode) return;
+    map.getCanvas().style.cursor = 'pointer';
+  });
+  map.on('mouseleave', 'road-score', () => {
+    if (paintMode || refineMode) return;
+    map.getCanvas().style.cursor = '';
+  });
+  map.on('mouseenter', 'road-selected', () => {
+    if (paintMode || refineMode) return;
+    map.getCanvas().style.cursor = 'pointer';
+  });
+  map.on('mouseleave', 'road-selected', () => {
+    if (paintMode || refineMode) return;
+    map.getCanvas().style.cursor = '';
+  });
+  map.on('mouseenter', 'crashes_dc', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'crashes_dc', () => { map.getCanvas().style.cursor = ''; });
+
+  setupRefineInteraction();
+  refineDebugInitUi();
+
+  try {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('refineSelfTest') === '1' && refineDebugEnabled()) {
+      map.once('idle', () => {
+        window.setTimeout(() => {
+          refineDebugSeedFractured(10);
+          toggleRefineMode();
+          const cmp = refineTest_collectSeenCompare();
+          refineDebugAgentLog(
+            'refineSelfTest',
+            'collect seen compare after fractured seed',
+            cmp,
+            'H-seen'
+          );
+        }, 2500);
+      });
+    }
+    if (sp.get('refineAgentMcpSuite') === '1' && refineDebugEnabled()) {
+      map.once('idle', () => {
+        window.setTimeout(() => refineAgentRunMcpSuite(), 2800);
+      });
+    }
+    if (sp.get('refineAgentFractured') === '1' && refineDebugEnabled()) {
+      map.once('idle', () => {
+        window.setTimeout(() => refineAgentRunFracturedNudgeSuite(), 2800);
+      });
+    }
+  } catch (e) { /* ignore */ }
+});
+
+function setupRefineInteraction() {
+  map.on('mousedown', refineMapMouseDown);
+  map.on('mousemove', refineMapMouseMove);
+  map.on('mouseup', refineMapMouseUp);
+}
+
+const refineHintEl = () => document.getElementById('refine-hint');
+const refineToolbarEl = () => document.getElementById('refine-toolbar');
+
+function setRefineLayersVisible(vis) {
+  const v = vis ? 'visible' : 'none';
+  if (map.getLayer('route-refine-handles')) map.setLayoutProperty('route-refine-handles', 'visibility', v);
+  if (map.getLayer('route-refine-preview-line')) map.setLayoutProperty('route-refine-preview-line', 'visibility', v);
+}
+
+function dedupeSelectionHistoryOrder() {
+  const out = [];
+  selectionHistory.forEach(id => {
+    if (out[out.length - 1] !== id) out.push(id);
+  });
+  return out;
+}
+
+function refineDebugEnabled() {
+  try {
+    if (typeof window !== 'undefined' && window.__REFINE_AGENT_LOG__) return true;
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('refineDebug') === '1') return true;
+    return new URLSearchParams(location.search).get('refineDebug') === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+// #region agent log
+function refineDebugAgentLog(location, message, data, hypothesisId) {
+  if (!refineDebugEnabled()) return;
+  const payload = {
+    sessionId: '367b7f',
+    location,
+    message,
+    data: data || {},
+    timestamp: Date.now(),
+    hypothesisId: hypothesisId || 'none'
+  };
+  fetch('http://127.0.0.1:7623/ingest/72c2ba50-6a40-429e-ba84-eb74ce7c1bce', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '367b7f' },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
+}
+// #endregion
+
+/** Collect up to this many distinct segment ids from bbox before greedy walk (debug seed). */
+const REFINE_DEBUG_SEED_RAW_CAP_MULT = 6;
+const REFINE_DEBUG_SEED_RAW_CAP_MIN = 48;
+
+/** First LineString endpoints for `querySegmentFeatureById` (same as stitch uses). */
+function refineDebugSegmentEndpoints(fid) {
+  const feat = querySegmentFeatureById(fid);
+  if (!feat || !feat.geometry) return null;
+  const lines = feat.geometry.type === 'LineString'
+    ? [feat.geometry.coordinates]
+    : feat.geometry.coordinates;
+  if (!lines || !lines[0] || lines[0].length < 2) return null;
+  const c = lines[0];
+  return { a0: c[0], a1: c[c.length - 1] };
+}
+
+/**
+ * Reorder ids into a walk along the road graph: each next segment is the closest unused
+ * endpoint-to-endpoint hop within `REFINE_GAP_BREAK_M` of the stitched chain tail.
+ * Falls back to raw render order if fewer than two steps can be chained.
+ */
+function refineDebugOrderIdsAsContiguousWalk(rawIds, maxLen) {
+  if (!rawIds || rawIds.length < 2) return rawIds;
+  const maxOut = Math.min(maxLen, rawIds.length);
+  const c = map.getCenter();
+  let startIdx = 0;
+  let bestStart = Infinity;
+  for (let i = 0; i < rawIds.length; i++) {
+    const ep = refineDebugSegmentEndpoints(rawIds[i]);
+    if (!ep) continue;
+    const d = Math.min(
+      haversineMeters(c.lng, c.lat, ep.a0[0], ep.a0[1]),
+      haversineMeters(c.lng, c.lat, ep.a1[0], ep.a1[1])
+    );
+    if (d < bestStart) {
+      bestStart = d;
+      startIdx = i;
+    }
+  }
+  const pool = rawIds.filter((_, j) => j !== startIdx);
+  const out = [rawIds[startIdx]];
+  while (out.length < maxOut && pool.length) {
+    const chains = buildMultiChainsFromOrderedIds(out);
+    const tc = chains[chains.length - 1];
+    if (!tc || !tc.length) break;
+    const end = tc[tc.length - 1];
+    let bestJ = -1;
+    let bestD = Infinity;
+    for (let j = 0; j < pool.length; j++) {
+      const ep = refineDebugSegmentEndpoints(pool[j]);
+      if (!ep) continue;
+      const d0 = haversineMeters(end[0], end[1], ep.a0[0], ep.a0[1]);
+      const d1 = haversineMeters(end[0], end[1], ep.a1[0], ep.a1[1]);
+      const d = Math.min(d0, d1);
+      if (d < bestD) {
+        bestD = d;
+        bestJ = j;
+      }
+    }
+    if (bestJ < 0 || bestD > REFINE_GAP_BREAK_M) break;
+    out.push(pool.splice(bestJ, 1)[0]);
+  }
+  if (out.length >= 2) return out;
+  return rawIds.slice(0, maxOut);
+}
+
+/** Raw bbox pool for debug seeds (render order, up to rawCap ids). */
+function refineDebugCollectRawSeedPool(maxN) {
+  maxN = maxN || 8;
+  if (!map) return { rawIds: [], propsById: new Map() };
+  const pt = map.project(map.getCenter());
+  const bbox = [[pt.x - 200, pt.y - 200], [pt.x + 200, pt.y + 200]];
+  let features = [];
+  try {
+    features = map.queryRenderedFeatures(bbox, { layers: ['road-score'] });
+  } catch (err) {
+    return { rawIds: [], propsById: new Map() };
+  }
+  const rawCap = Math.max(maxN * REFINE_DEBUG_SEED_RAW_CAP_MULT, REFINE_DEBUG_SEED_RAW_CAP_MIN);
+  const propsById = new Map();
+  const rawIds = [];
+  const seen = new Set();
+  for (let fi = 0; fi < features.length && rawIds.length < rawCap; fi++) {
+    const f = features[fi];
+    const fid = f.id !== undefined ? f.id : f.properties && f.properties.ogc_fid;
+    if (fid == null || !f.properties || seen.has(String(fid))) continue;
+    seen.add(String(fid));
+    rawIds.push(fid);
+    propsById.set(fid, f.properties);
+  }
+  return { rawIds, propsById };
+}
+
+/** Fake a multi-segment selection from visible roads near map center (no paint). Returns count. */
+function refineDebugSeedNearCenter(maxN) {
+  maxN = maxN || 8;
+  const { rawIds, propsById } = refineDebugCollectRawSeedPool(maxN);
+  const ordered = refineDebugOrderIdsAsContiguousWalk(rawIds, maxN);
+  if (ordered.length < 2) return ordered.length;
+  replaceEntireSelection(ordered, propsById);
+  refineDebugDumpNetwork('after seed');
+  return ordered.length;
+}
+
+/**
+ * Same bbox pool as normal seed but **no contiguous walk** — reproduces many disjoint refine paths
+ * for testing collect / handle drift (debug only).
+ */
+function refineDebugSeedFractured(maxN) {
+  maxN = maxN || 10;
+  const { rawIds, propsById } = refineDebugCollectRawSeedPool(maxN);
+  const ordered = rawIds.slice(0, maxN);
+  if (ordered.length < 2) return ordered.length;
+  replaceEntireSelection(ordered, propsById);
+  refineDebugDumpNetwork('after seed fractured');
+  return ordered.length;
+}
+
+function refineDebugDumpNetwork(label) {
+  const order = strokeOrderedSegmentIds.length ? strokeOrderedSegmentIds.slice() : dedupeSelectionHistoryOrder();
+  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
+  const chainLens = chains.map(c => (c && c.length) || 0);
+  const handleLens = refinePaths.map(p => (p && p.handles && p.handles.length) || 0);
+  const data = {
+    label: label || 'dump',
+    refineMode,
+    orderLen: order.length,
+    chainCount: chains.length,
+    chainVtxLens: chainLens,
+    refinePathCount: refinePaths.length,
+    refinePathHandleLens: handleLens,
+    orderHead: order.slice(0, 20),
+    orderTail: order.slice(-8)
+  };
+  return data;
+}
+
+function refineDebugInitUi() {
+  const btn = document.getElementById('refine-debug-seed-btn');
+  if (btn && refineDebugEnabled()) btn.style.display = '';
+  if (refineDebugEnabled()) {
+    document.querySelectorAll('.refine-test-btn').forEach(b => {
+      b.style.display = '';
+    });
+  }
+  window.refineDebugSeedNearCenter = refineDebugSeedNearCenter;
+  window.refineDebugSeedFractured = refineDebugSeedFractured;
+  window.refineDebugDumpNetwork = refineDebugDumpNetwork;
+  window.refineDebugEnabled = refineDebugEnabled;
+  window.refineTest_networkSnapshot = refineTest_networkSnapshot;
+  window.refineTest_applyHandleCommit = refineTest_applyHandleCommit;
+  window.refineTest_nudgeHandleScreen = refineTest_nudgeHandleScreen;
+  window.refineTest_scenarioExtendEnd = refineTest_scenarioExtendEnd;
+  window.refineTest_scenarioRightTurnMid = refineTest_scenarioRightTurnMid;
+  window.refineTest_scenarioShrinkEnd = refineTest_scenarioShrinkEnd;
+  window.refineTest_collectSeenCompare = refineTest_collectSeenCompare;
+  window.refineTest_dotSanityAudit = refineTest_dotSanityAudit;
+  window.refineAgentRunMcpSuite = refineAgentRunMcpSuite;
+  window.refineAgentRunFracturedNudgeSuite = refineAgentRunFracturedNudgeSuite;
+}
+
+function haversineMeters(lon1, lat1, lon2, lat2) {
+  const R = 6371000;
+  const toR = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toR;
+  const dLon = (lon2 - lon1) * toR;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function bearingDeg(ax, ay, bx, by) {
+  const dLon = (bx - ax) * Math.PI / 180;
+  const lat1 = ay * Math.PI / 180;
+  const lat2 = by * Math.PI / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function angleDeltaDeg(b0, b1) {
+  let d = Math.abs(b1 - b0) % 360;
+  if (d > 180) d = 360 - d;
+  return d;
+}
+
+/**
+ * When stitching ordered segments, start a new polyline if the jump to the next
+ * segment is larger than REFINE_GAP_BREAK_M (disjoint selection / paint islands).
+ */
+function appendSegmentCoordsToChains(chains, feat) {
+  if (!feat || !feat.geometry) return;
+  const lines = feat.geometry.type === 'LineString'
+    ? [feat.geometry.coordinates]
+    : feat.geometry.coordinates;
+  const JOINT_M = 2;
+  for (let li = 0; li < lines.length; li++) {
+    const coords = lines[li];
+    if (coords.length < 2) continue;
+    const a0 = coords[0], a1 = coords[coords.length - 1];
+    if (chains.length === 0) chains.push([]);
+    let chain = chains[chains.length - 1];
+    if (chain.length === 0) {
+      coords.forEach(c => chain.push([c[0], c[1]]));
+      continue;
+    }
+    const last = chain[chain.length - 1];
+    const d0 = haversineMeters(last[0], last[1], a0[0], a0[1]);
+    const d1 = haversineMeters(last[0], last[1], a1[0], a1[1]);
+    const rev = d1 < d0;
+    const walk = rev ? [...coords].reverse() : coords;
+    let start = 0;
+    if (haversineMeters(last[0], last[1], walk[0][0], walk[0][1]) < JOINT_M) start = 1;
+    const gapToStart = start === 0
+      ? haversineMeters(last[0], last[1], walk[0][0], walk[0][1])
+      : 0;
+    if (gapToStart > REFINE_GAP_BREAK_M) {
+      chains.push([]);
+      chain = chains[chains.length - 1];
+      for (let i = 0; i < walk.length; i++) chain.push([walk[i][0], walk[i][1]]);
+    } else {
+      for (let i = start; i < walk.length; i++) chain.push([walk[i][0], walk[i][1]]);
+    }
+  }
+}
+
+function buildMultiChainsFromOrderedIds(order) {
+  const chains = [];
+  for (let i = 0; i < order.length; i++) {
+    const feat = querySegmentFeatureById(order[i]);
+    if (!feat) continue;
+    appendSegmentCoordsToChains(chains, feat);
+  }
+  return chains.filter(c => c.length >= 2);
+}
+
+/** Drop nearly-coincident consecutive vertices from stitched chain (segment join noise). */
+function pruneNearDuplicateChainPoints(chain, epsM) {
+  epsM = epsM == null ? REFINE_CHAIN_VERTEX_MERGE_M : epsM;
+  if (!chain || chain.length < 2) return chain;
+  const out = [[chain[0][0], chain[0][1]]];
+  for (let i = 1; i < chain.length; i++) {
+    const x = chain[i][0], y = chain[i][1];
+    const last = out[out.length - 1];
+    if (haversineMeters(last[0], last[1], x, y) < epsM) continue;
+    out.push([x, y]);
+  }
+  return out.length >= 2 ? out : chain;
+}
+
+/** Interior points along chain indices [i0 .. i1] at ~spacingM (endpoints excluded). */
+function midsAlongChainSpan(chain, i0, i1, spacingM) {
+  const EPS = 12;
+  const out = [];
+  if (i1 <= i0) return out;
+  let distAlong = 0;
+  let nextMark = spacingM;
+  for (let i = i0; i < i1; i++) {
+    const ax = chain[i][0], ay = chain[i][1];
+    const bx = chain[i + 1][0], by = chain[i + 1][1];
+    const L = haversineMeters(ax, ay, bx, by);
+    while (nextMark < distAlong + L - EPS) {
+      const into = nextMark - distAlong;
+      const t = into / L;
+      out.push({ lng: ax + t * (bx - ax), lat: ay + t * (by - ay) });
+      nextMark += spacingM;
+    }
+    distAlong += L;
+  }
+  return out;
+}
+
+/** Handles at endpoints, sharp bends (intersection-like), and along long straights. */
+function placeHandlesForChain(chain) {
+  chain = pruneNearDuplicateChainPoints(chain, REFINE_CHAIN_VERTEX_MERGE_M);
+  const n = chain.length;
+  if (n < 2) return [];
+  if (n === 2) {
+    return [
+      { lng: chain[0][0], lat: chain[0][1] },
+      { lng: chain[1][0], lat: chain[1][1] }
+    ];
+  }
+  const keyIdxRaw = [];
+  for (let i = 0; i < n; i++) {
+    if (i === 0 || i === n - 1) keyIdxRaw.push(i);
+    else {
+      const br0 = bearingDeg(chain[i - 1][0], chain[i - 1][1], chain[i][0], chain[i][1]);
+      const br1 = bearingDeg(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
+      if (angleDeltaDeg(br0, br1) >= REFINE_MIN_TURN_DEG) keyIdxRaw.push(i);
+    }
+  }
+  const keyIdx = mergeCloseCornersAlongChain(chain, keyIdxRaw, REFINE_CORNER_MERGE_RUN_M);
+  const handles = [];
+  for (let k = 0; k < keyIdx.length; k++) {
+    const ik = keyIdx[k];
+    handles.push({ lng: chain[ik][0], lat: chain[ik][1] });
+    if (k < keyIdx.length - 1) {
+      const i0 = keyIdx[k];
+      const i1 = keyIdx[k + 1];
+      midsAlongChainSpan(chain, i0, i1, REFINE_STRAIGHT_SUBDIV_M).forEach(m => handles.push(m));
+    }
+  }
+  return handles;
+}
+
+function mergeCloseCornersAlongChain(chain, keyIdx, minRunM) {
+  if (keyIdx.length <= 2) return keyIdx;
+  const end = keyIdx[keyIdx.length - 1];
+  const merged = [keyIdx[0]];
+  for (let a = 1; a < keyIdx.length - 1; a++) {
+    const cur = keyIdx[a];
+    const lastM = merged[merged.length - 1];
+    let run = 0;
+    for (let i = lastM; i < cur; i++) {
+      run += haversineMeters(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
+    }
+    if (run < minRunM) continue;
+    merged.push(cur);
+  }
+  if (merged[merged.length - 1] !== end) merged.push(end);
+  return merged;
+}
+
+function selectedSegmentIdSet() {
+  const s = new Set();
+  selectedSegments.forEach((_, id) => { s.add(String(id)); });
+  return s;
+}
+
+function buildRefinePathsFromChains(chains) {
+  return chains
+    .map(chain => {
+      const path = {
+        handles: placeHandlesForChain(chain).map(h =>
+          snapRefineHandleClosestOnBestEdge(h.lng, h.lat, { onlySelectedSegments: true })
+        )
+      };
+      dedupeNearIdenticalRefineHandles(path, REFINE_HANDLE_POST_SNAP_DEDUPE_M);
+      return path;
+    })
+    .filter(p => p.handles.length >= 2);
+}
+
+function syncRefineHandleSource() {
+  const src = map.getSource('route-refine-handles');
+  if (!src) return;
+  const feats = [];
+  for (let pi = 0; pi < refinePaths.length; pi++) {
+    const handles = refinePaths[pi].handles;
+    for (let hi = 0; hi < handles.length; hi++) {
+      const h = handles[hi];
+      feats.push({
+        type: 'Feature',
+        properties: { pathIdx: pi, handleIdx: hi },
+        geometry: { type: 'Point', coordinates: [h.lng, h.lat] }
+      });
+    }
+  }
+  src.setData({ type: 'FeatureCollection', features: feats });
+}
+
+function syncRefinePreviewLine() {
+  const src = map.getSource('route-refine-preview');
+  if (!src) return;
+  const order = strokeOrderedSegmentIds.length
+    ? strokeOrderedSegmentIds.slice()
+    : dedupeSelectionHistoryOrder();
+  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
+  const lineFeatures = [];
+  for (let pi = 0; pi < refinePaths.length; pi++) {
+    const handles = refinePaths[pi].handles;
+    if (handles.length < 2) continue;
+    let coords;
+    if (pi < chains.length && chains[pi] && chains[pi].length >= 2) {
+      coords = buildRoadFollowingPreviewCoordsForChain(chains[pi], handles);
+    } else {
+      coords = [];
+      for (let i = 0; i < handles.length; i++) {
+        const p = handles[i];
+        if (
+          coords.length > 0 &&
+          haversineMeters(coords[coords.length - 1][0], coords[coords.length - 1][1], p.lng, p.lat) < 0.25
+        ) {
+          continue;
+        }
+        coords.push([p.lng, p.lat]);
+      }
+    }
+    if (coords.length < 2) continue;
+    const coordsClean = dedupeConsecutiveLngLatCoords(coords, 0.12);
+    if (coordsClean.length < 2) continue;
+    lineFeatures.push({
+      type: 'Feature',
+      properties: { pathIdx: pi },
+      geometry: { type: 'LineString', coordinates: coordsClean }
+    });
+  }
+  src.setData({ type: 'FeatureCollection', features: lineFeatures });
+}
+
+function closestTOnSegPx(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-8) return 0;
+  return Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+}
+
+/** Closest point on stitched chain plus segment index and t along that segment (screen-space). */
+function closestOnChainSegmentMeta(chain, lng, lat) {
+  const pt = map.project([lng, lat]);
+  let bestDist = Infinity;
+  let best = { segIdx: 0, t: 0, lng, lat };
+  for (let i = 0; i < chain.length - 1; i++) {
+    const A = map.project([chain[i][0], chain[i][1]]);
+    const B = map.project([chain[i + 1][0], chain[i + 1][1]]);
+    const t = closestTOnSegPx(pt.x, pt.y, A.x, A.y, B.x, B.y);
+    const mx = A.x + t * (B.x - A.x);
+    const my = A.y + t * (B.y - A.y);
+    const d = Math.hypot(pt.x - mx, pt.y - my);
+    if (d < bestDist) {
+      bestDist = d;
+      const ll = map.unproject([mx, my]);
+      best = { segIdx: i, t, lng: ll.lng, lat: ll.lat };
+    }
+  }
+  return best;
+}
+
+/** Closest (screen) point on chain whose arclength lies in [sMin, sMax] (meters along chain). */
+function closestOnChainSegmentMetaInArclenWindow(chain, lng, lat, sMin, sMax) {
+  const pt = map.project([lng, lat]);
+  let bestDist = Infinity;
+  let best = null;
+  let cum = 0;
+  for (let i = 0; i < chain.length - 1; i++) {
+    const ax = chain[i][0], ay = chain[i][1], bx = chain[i + 1][0], by = chain[i + 1][1];
+    const Lm = haversineMeters(ax, ay, bx, by);
+    const A = map.project([ax, ay]);
+    const B = map.project([bx, by]);
+    const t = closestTOnSegPx(pt.x, pt.y, A.x, A.y, B.x, B.y);
+    const mx = A.x + t * (B.x - A.x);
+    const my = A.y + t * (B.y - A.y);
+    const d = Math.hypot(pt.x - mx, pt.y - my);
+    const s = cum + (Lm > 1e-9 ? t * Lm : 0);
+    if (s >= sMin - 1e-4 && s <= sMax + 1e-4 && d < bestDist) {
+      bestDist = d;
+      const ll = map.unproject([mx, my]);
+      best = { segIdx: i, t, lng: ll.lng, lat: ll.lat };
+    }
+    cum += Lm;
+  }
+  return best;
+}
+
+function screenDistPxToChainMeta(chain, lng, lat, meta) {
+  const pt = map.project([lng, lat]);
+  const A = map.project([chain[meta.segIdx][0], chain[meta.segIdx][1]]);
+  const B = map.project([chain[meta.segIdx + 1][0], chain[meta.segIdx + 1][1]]);
+  const t = meta.t;
+  const mx = A.x + t * (B.x - A.x);
+  const my = A.y + t * (B.y - A.y);
+  return Math.hypot(pt.x - mx, pt.y - my);
+}
+
+function dedupeConsecutiveLngLatCoords(coords, minM) {
+  minM = minM == null ? 0.12 : minM;
+  if (!coords || coords.length < 2) return coords || [];
+  const out = [coords[0]];
+  for (let i = 1; i < coords.length; i++) {
+    const p = coords[i];
+    const q = out[out.length - 1];
+    if (haversineMeters(q[0], q[1], p[0], p[1]) < minM) continue;
+    out.push(p);
+  }
+  return out.length >= 2 ? out : coords;
+}
+
+function arclengthToChainPointMeta(chain, segIdx, t) {
+  let s = 0;
+  for (let i = 0; i < segIdx; i++) {
+    s += haversineMeters(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
+  }
+  const ax = chain[segIdx][0], ay = chain[segIdx][1], bx = chain[segIdx + 1][0], by = chain[segIdx + 1][1];
+  const Lm = haversineMeters(ax, ay, bx, by);
+  return s + (Lm > 1e-9 ? t * Lm : 0);
+}
+
+function chainTotalArclengthM(chain) {
+  let s = 0;
+  for (let i = 0; i < chain.length - 1; i++) {
+    s += haversineMeters(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
+  }
+  return s;
+}
+
+/** Sub-polyline of chain from arclength s0 to s1 (inclusive), with s0 <= s1 along chain order. */
+function sliceChainPolylineByArclen(chain, s0, s1) {
+  const total = chainTotalArclengthM(chain);
+  if (s1 < s0) {
+    const x = s0;
+    s0 = s1;
+    s1 = x;
+  }
+  s0 = Math.max(0, s0);
+  s1 = Math.min(total, s1);
+  if (s1 - s0 < 1e-4) return [];
+  const out = [];
+  const pushPt = (lng, lat) => {
+    if (out.length === 0) {
+      out.push([lng, lat]);
+      return;
+    }
+    const last = out[out.length - 1];
+    if (haversineMeters(last[0], last[1], lng, lat) < 0.05) return;
+    out.push([lng, lat]);
+  };
+  let cum = 0;
+  for (let i = 0; i < chain.length - 1; i++) {
+    const ax = chain[i][0], ay = chain[i][1], bx = chain[i + 1][0], by = chain[i + 1][1];
+    const Lm = haversineMeters(ax, ay, bx, by);
+    if (Lm < 1e-9) {
+      cum += Lm;
+      continue;
+    }
+    const segStart = cum;
+    const segEnd = cum + Lm;
+    const lo = Math.max(s0, segStart);
+    const hi = Math.min(s1, segEnd);
+    if (lo < hi - 1e-3) {
+      const t0 = (lo - segStart) / Lm;
+      const t1 = (hi - segStart) / Lm;
+      const p0x = ax + t0 * (bx - ax);
+      const p0y = ay + t0 * (by - ay);
+      const p1x = ax + t1 * (bx - ax);
+      const p1y = ay + t1 * (by - ay);
+      pushPt(p0x, p0y);
+      if (t1 - t0 > 1e-5) pushPt(p1x, p1y);
+    }
+    cum += Lm;
+  }
+  return out;
+}
+
+/** Dashed refine preview follows the stitched centerline between handles (not lon/lat chords). */
+function buildRoadFollowingPreviewCoordsForChain(chain, handles) {
+  if (!chain || chain.length < 2 || handles.length < 2) {
+    return handles.map(h => [h.lng, h.lat]);
+  }
+  const coords = [];
+  const total = chainTotalArclengthM(chain);
+  for (let i = 0; i < handles.length - 1; i++) {
+    const ha = handles[i];
+    const hb = handles[i + 1];
+    const ma = closestOnChainSegmentMeta(chain, ha.lng, ha.lat);
+    const sA = arclengthToChainPointMeta(chain, ma.segIdx, ma.t);
+    const chordM = Math.max(0.6, haversineMeters(ha.lng, ha.lat, hb.lng, hb.lat));
+    const win = Math.min(total * 0.49 + 1e-6, Math.max(REFINE_PREVIEW_LEG_ARCLEN_PAD_M, chordM * REFINE_PREVIEW_LEG_ARCLEN_PER_CHORD));
+    const sMin = Math.max(0, sA - win);
+    const sMax = Math.min(total, sA + win);
+    const mbGlobal = closestOnChainSegmentMeta(chain, hb.lng, hb.lat);
+    const sBg = arclengthToChainPointMeta(chain, mbGlobal.segIdx, mbGlobal.t);
+    let mb = mbGlobal;
+    if (sBg < sMin - 2 || sBg > sMax + 2) {
+      const mbWin = closestOnChainSegmentMetaInArclenWindow(chain, hb.lng, hb.lat, sMin, sMax);
+      if (mbWin) {
+        const dG = screenDistPxToChainMeta(chain, hb.lng, hb.lat, mbGlobal);
+        const dW = screenDistPxToChainMeta(chain, hb.lng, hb.lat, mbWin);
+        if (dW <= dG + REFINE_PREVIEW_BRANCH_HYST_PX) mb = mbWin;
+      }
+    }
+    const sB = arclengthToChainPointMeta(chain, mb.segIdx, mb.t);
+    let leg;
+    if (Math.abs(sB - sA) < 0.35) {
+      leg = [[ma.lng, ma.lat], [mb.lng, mb.lat]];
+    } else if (sA <= sB) {
+      leg = sliceChainPolylineByArclen(chain, sA, sB);
+    } else {
+      const seg = sliceChainPolylineByArclen(chain, sB, sA);
+      leg = seg.slice().reverse();
+    }
+    if (leg.length < 2) {
+      leg = [[ma.lng, ma.lat], [mb.lng, mb.lat]];
+    }
+    if (coords.length > 0 && leg.length > 0) {
+      const L = coords[coords.length - 1];
+      const F = leg[0];
+      if (haversineMeters(L[0], L[1], F[0], F[1]) < 0.15) {
+        leg = leg.slice(1);
+      }
+    }
+    for (let k = 0; k < leg.length; k++) coords.push(leg[k]);
+  }
+  return coords.length >= 2 ? coords : handles.map(h => [h.lng, h.lat]);
+}
+
+/**
+ * Snap (lng,lat) to the **closest point** on the best nearby road LineString sub-segment
+ * (perpendicular in screen space, then unproject). Used when opening refine / moving follower
+ * handles so straight-span controls stay on the same centerline, not teleported to another
+ * intersection.
+ */
+function snapRefineHandleClosestOnBestEdge(lng, lat, opts) {
+  opts = opts || {};
+  const pt = map.project([lng, lat]);
+  const tang = { nx: 1, ny: 0, ready: false };
+  const only = opts.onlySelectedSegments ? selectedSegmentIdSet() : null;
+  let c = findBestCandidate(pt, {
+    dirOverride: tang,
+    allowSelected: true,
+    avoidRevisit: false,
+    onlyFeatureIds: only && only.size ? only : null
+  });
+  if (!c && only && only.size) {
+    c = findBestCandidate(pt, { dirOverride: tang, allowSelected: true, avoidRevisit: false });
+  }
+  if (!c || !c.edge) return { lng, lat };
+  if (c.vertexLLA && c.vertexLLB) {
+    const pa = map.project(c.vertexLLA);
+    const pb = map.project(c.vertexLLB);
+    const t = closestTOnSegPx(pt.x, pt.y, pa.x, pa.y, pb.x, pb.y);
+    const mx = pa.x + t * (pb.x - pa.x);
+    const my = pa.y + t * (pb.y - pa.y);
+    const ll = map.unproject([mx, my]);
+    return { lng: ll.lng, lat: ll.lat };
+  }
+  const mx = (c.edge.ax + c.edge.bx) / 2;
+  const my = (c.edge.ay + c.edge.by) / 2;
+  const ll = map.unproject([mx, my]);
+  return { lng: ll.lng, lat: ll.lat };
+}
+
+/**
+ * Snap to **polyline endpoint** of the best nearby road sub-segment (intersection / block end).
+ * Used for the **actively dragged** refine handle so it locks to draggable junction geometry.
+ */
+function snapRefineHandleToRoadVertex(lng, lat) {
+  const pt = map.project([lng, lat]);
+  const tang = { nx: 1, ny: 0, ready: false };
+  const c = findBestCandidate(pt, { dirOverride: tang, allowSelected: true, avoidRevisit: false });
+  if (!c || !c.edge) return { lng, lat };
+  if (c.vertexLLA && c.vertexLLB) {
+    const pa = map.project(c.vertexLLA);
+    const pb = map.project(c.vertexLLB);
+    const dA = Math.hypot(pt.x - pa.x, pt.y - pa.y);
+    const dB = Math.hypot(pt.x - pb.x, pt.y - pb.y);
+    const pick = dA <= dB ? c.vertexLLA : c.vertexLLB;
+    return { lng: pick[0], lat: pick[1] };
+  }
+  const mx = (c.edge.ax + c.edge.bx) / 2;
+  const my = (c.edge.ay + c.edge.by) / 2;
+  const ll = map.unproject([mx, my]);
+  return { lng: ll.lng, lat: ll.lat };
+}
+
+/**
+ * Remove consecutive handles closer than `epsM` (repeated until stable).
+ * Multi-pass catches snap pile-ups where A–B and B–C were both above threshold but A–C is not.
+ */
+function dedupeNearIdenticalRefineHandles(path, epsM) {
+  epsM = epsM == null ? 0.35 : epsM;
+  if (!path || path.handles.length < 2) return;
+  let guard = 0;
+  while (path.handles.length >= 2 && guard++ < path.handles.length + 8) {
+    const h = path.handles;
+    const out = [h[0]];
+    for (let i = 1; i < h.length; i++) {
+      const prev = out[out.length - 1];
+      if (haversineMeters(prev.lng, prev.lat, h[i].lng, h[i].lat) < epsM) continue;
+      out.push(h[i]);
+    }
+    if (out.length === h.length) break;
+    if (out.length >= 2) path.handles = out;
+    else break;
+  }
+}
+
+function distPtToCandidateEdgePx(pt, cand) {
+  if (!cand || !cand.edge) return 1e9;
+  return ptSegDist(pt.x, pt.y, cand.edge.ax, cand.edge.ay, cand.edge.bx, cand.edge.by);
+}
+
+/**
+ * Prefer continuing on `prevFidKey` unless the globally best edge is clearly closer — stops
+ * collecting every arm of every intersection along the handle chord.
+ */
+function pickRefineChordSnapCandidate(pt, prevFidKey) {
+  const isoDir = { nx: 1, ny: 0, ready: false };
+  const base = { dirOverride: isoDir, allowSelected: true, avoidRevisit: false };
+  const best = findBestCandidate(pt, base);
+  if (!best || !prevFidKey) return best;
+  if (String(best.featureId) === prevFidKey) return best;
+  const cont = findBestCandidate(pt, {
+    ...base,
+    onlyFeatureIds: new Set([prevFidKey])
+  });
+  if (!cont) return best;
+  const dBest = distPtToCandidateEdgePx(pt, best);
+  const dCont = distPtToCandidateEdgePx(pt, cont);
+  if (dCont <= dBest + REFINE_COLLECT_HYSTERESIS_PX) return cont;
+  return best;
+}
+
+/** Drop consecutive duplicate segment ids (shared junction when concatenating per-path lists). */
+function dedupeConsecutiveOrderedSegmentIds(ids) {
+  const out = [];
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    if (out.length && String(out[out.length - 1]) === String(id)) continue;
+    out.push(id);
+  }
+  return out;
+}
+
+/**
+ * Walk handle polyline legs → MVT segments for `replaceEntireSelection`.
+ * - **Isotropic** snap (no chord-only direction bias) so laterals can win when clearly closer.
+ * - **Hysteresis** along the sample sequence so we do not hop between intersection arms every step.
+ * - **Coarser** adaptive spacing than before (fewer samples at each node).
+ *
+ * @param {'global' | 'perPath'} seenScope
+ *   `global` = one Set for all paths (legacy; chord samples on path A can steal ids before path B runs).
+ *   `perPath` = fresh Set per refine path so disjoint chains do not cross-contaminate segment order.
+ */
+function collectIdsAlongHandlePathInner(seenScope) {
+  const propsById = new Map();
+  const ordered = [];
+  const globalSeen = seenScope === 'global' ? new Set() : null;
+  for (let pi = 0; pi < refinePaths.length; pi++) {
+    const pathSeen = seenScope === 'perPath' ? new Set() : globalSeen;
+    const handles = refinePaths[pi].handles;
+    for (let leg = 0; leg < handles.length - 1; leg++) {
+      const ha = handles[leg], hb = handles[leg + 1];
+      const dx = hb.lng - ha.lng, dy = hb.lat - ha.lat;
+      const chordM = Math.max(1, haversineMeters(ha.lng, ha.lat, hb.lng, hb.lat));
+      const steps = Math.min(
+        REFINE_CHORD_MAX_STEPS,
+        Math.max(REFINE_CHORD_MIN_STEPS, Math.ceil(chordM / REFINE_CHORD_SAMPLE_STEP_M))
+      );
+      let prevFidKey = null;
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const lng = ha.lng + dx * t, lat = ha.lat + dy * t;
+        const pt = map.project([lng, lat]);
+        const c = pickRefineChordSnapCandidate(pt, prevFidKey);
+        if (!c) continue;
+        const fid = c.featureId;
+        const fidKey = fid == null ? '' : String(fid);
+        prevFidKey = fidKey;
+        propsById.set(fid, c.props);
+        if (!pathSeen.has(fidKey)) {
+          pathSeen.add(fidKey);
+          ordered.push(fid);
+        }
+      }
+    }
+  }
+  return { ordered, propsById };
+}
+
+/**
+ * Walk handle polyline legs → MVT segments for `replaceEntireSelection`.
+ * Uses **per-path** dedupe so dragging one chain does not drop or reorder segments on other chains.
+ */
+function collectIdsAlongHandlePath() {
+  const inner = collectIdsAlongHandlePathInner('perPath');
+  let ordered = dedupeConsecutiveOrderedSegmentIds(inner.ordered);
+  if (refineDebugEnabled() && refinePaths.length > 1) {
+    const g = collectIdsAlongHandlePathInner('global');
+    const gOrd = dedupeConsecutiveOrderedSegmentIds(g.ordered);
+    const sameLen = ordered.length === gOrd.length;
+    let sameSeq = sameLen;
+    if (sameSeq) {
+      for (let i = 0; i < ordered.length; i++) {
+        if (String(ordered[i]) !== String(gOrd[i])) {
+          sameSeq = false;
+          break;
+        }
+      }
+    }
+    const setP = new Set(ordered.map(String));
+    const setG = new Set(gOrd.map(String));
+    let onlyInGlobal = 0;
+    let onlyInPerPath = 0;
+    setG.forEach(k => { if (!setP.has(k)) onlyInGlobal++; });
+    setP.forEach(k => { if (!setG.has(k)) onlyInPerPath++; });
+    refineDebugAgentLog(
+      'collectIdsAlongHandlePath',
+      'seenScope compare',
+      {
+        pathCount: refinePaths.length,
+        perPathLen: ordered.length,
+        globalLen: gOrd.length,
+        sameSequence: sameSeq,
+        onlyInGlobal,
+        onlyInPerPath
+      },
+      'H-seen'
+    );
+  }
+  return { ordered, propsById: inner.propsById };
+}
+
+/** Debug: compare global vs per-path collect (call with refine open, multi-path). */
+function refineTest_collectSeenCompare() {
+  if (!refineMode || refinePaths.length < 2) {
+    return { ok: false, err: 'need refineMode and refinePaths.length >= 2' };
+  }
+  const p = dedupeConsecutiveOrderedSegmentIds(collectIdsAlongHandlePathInner('perPath').ordered);
+  const g = dedupeConsecutiveOrderedSegmentIds(collectIdsAlongHandlePathInner('global').ordered);
+  const setP = new Set(p.map(String));
+  const setG = new Set(g.map(String));
+  const onlyG = [...setG].filter(k => !setP.has(k)).map(Number);
+  const onlyP = [...setP].filter(k => !setG.has(k)).map(Number);
+  return {
+    ok: true,
+    refinePathCount: refinePaths.length,
+    perPathLen: p.length,
+    globalLen: g.length,
+    lengthDelta: p.length - g.length,
+    onlyInGlobal: onlyG,
+    onlyInPerPath: onlyP
+  };
+}
+
+function snapshotRefineSelection() {
+  return {
+    segments: new Map(selectedSegments),
+    stroke: strokeOrderedSegmentIds.slice()
+  };
+}
+
+function selectionSnapshotsEqual(a, b) {
+  if (!a || !b) return false;
+  if (a.stroke.length !== b.stroke.length) return false;
+  for (let i = 0; i < a.stroke.length; i++) {
+    if (a.stroke[i] !== b.stroke[i]) return false;
+  }
+  return true;
+}
+
+function restoreRefineUndoSnapshot(snap) {
+  const ordered = snap.stroke.slice();
+  const propsById = new Map();
+  for (let i = 0; i < ordered.length; i++) {
+    const id = ordered[i];
+    const p = snap.segments.get(id);
+    if (p) propsById.set(id, p);
+  }
+  if (!ordered.length) return;
+  replaceEntireSelection(ordered, propsById);
+}
+
+function updateRefineUndoUi() {
+  const btn = document.getElementById('refine-undo-btn');
+  const meta = document.getElementById('refine-undo-meta');
+  if (!btn || !meta) return;
+  const n = refineUndoStack.length;
+  btn.disabled = n === 0;
+  meta.textContent = n === 0 ? 'No refine steps yet' : `${n} undo step${n !== 1 ? 's' : ''} available`;
+}
+
+function refineUndoLast() {
+  if (!refineMode || refineUndoStack.length === 0) return;
+  const snap = refineUndoStack.pop();
+  restoreRefineUndoSnapshot(snap);
+  rebuildRefinePathsAfterLiveCommit();
+  updateRefineUndoUi();
+  syncRefineHandleSource();
+  syncRefinePreviewLine();
+}
+
+/** Nearest point on stitched chain polyline (screen-space segment distance) for handle reprojection. */
+function closestPointOnChainPx(chain, lng, lat) {
+  const m = closestOnChainSegmentMeta(chain, lng, lat);
+  return { lng: m.lng, lat: m.lat };
+}
+
+/**
+ * After live segment replacement, keep the **same handle count** and re-seat each handle on the
+ * new centerline instead of re-running `placeHandlesForChain` + even cap (which injected phantom
+ * dots mid-route) whenever stroke order changed slightly.
+ */
+function tryReprojectRefineHandlesOntoChains(chains) {
+  if (refinePaths.length !== chains.length) return false;
+  for (let pi = 0; pi < chains.length; pi++) {
+    const ch = chains[pi];
+    const p = refinePaths[pi];
+    if (!ch || ch.length < 2 || !p || !p.handles || p.handles.length < 2) return false;
+  }
+  for (let pi = 0; pi < chains.length; pi++) {
+    const chain = chains[pi];
+    const path = refinePaths[pi];
+    for (let hi = 0; hi < path.handles.length; hi++) {
+      const h = path.handles[hi];
+      const p0 = closestPointOnChainPx(chain, h.lng, h.lat);
+      path.handles[hi] = snapRefineHandleClosestOnBestEdge(p0.lng, p0.lat, { onlySelectedSegments: true });
+    }
+    dedupeNearIdenticalRefineHandles(path, REFINE_HANDLE_POST_SNAP_DEDUPE_M);
+  }
+  return true;
+}
+
+function rebuildRefinePathsAfterLiveCommit() {
+  const order = strokeOrderedSegmentIds.length
+    ? strokeOrderedSegmentIds.slice()
+    : dedupeSelectionHistoryOrder();
+  if (order.length === 0) return;
+  const chains = buildMultiChainsFromOrderedIds(order);
+  if (!chains.length) return;
+  if (!tryReprojectRefineHandlesOntoChains(chains)) {
+    const next = buildRefinePathsFromChains(chains);
+    if (next.length && next.some(p => p.handles.length >= 2)) refinePaths = next;
+  }
+}
+
+function replaceEntireSelection(orderedIds, propsById) {
+  selectedSegments.forEach((_, id) => {
+    map.setFeatureState(
+      { source: 'segments', sourceLayer: 'update_score_v2', id },
+      { selected: false, pending: false }
+    );
+  });
+  selectedSegments.clear();
+  selectionHistory.length = 0;
+  strokeOrderedSegmentIds.length = 0;
+  lastCommittedEdge = null;
+  strokeBatchesHistory.length = 0;
+  orderedIds.forEach(id => {
+    const props = propsById.get(id);
+    if (!props) return;
+    selectedSegments.set(id, props);
+    selectionHistory.push(id);
+    strokeOrderedSegmentIds.push(id);
+    map.setFeatureState(
+      { source: 'segments', sourceLayer: 'update_score_v2', id },
+      { selected: true, pending: false }
+    );
+  });
+  updateBadge();
+}
+
+function detachRefineGlobalPointerUp() {
+  if (refinePointerUpBound) {
+    window.removeEventListener('pointerup', refinePointerUpBound, true);
+    refinePointerUpBound = null;
+  }
+}
+
+function refineGlobalPointerUp(e) {
+  if (!refineMode || !refineDrag) return;
+  refineMapMouseUp(e);
+}
+
+function exitRefineMode(restoreSnapshot) {
+  refineMode = false;
+  refineDrag = null;
+  refinePreDragSnapshot = null;
+  refineGestureMoved = false;
+  detachRefineGlobalPointerUp();
+  document.getElementById('refineBtn').classList.remove('active');
+  refineHintEl().classList.remove('visible');
+  refineToolbarEl().classList.remove('visible');
+  refineUndoStack.length = 0;
+  updateRefineUndoUi();
+  setRefineLayersVisible(false);
+  if (!paintMode) map.dragPan.enable();
+  if (!paintMode) map.doubleClickZoom.enable();
+  map.scrollZoom.enable();
+  map.touchZoomRotate.enable();
+  if (restoreSnapshot && refineSnapshot) {
+    replaceEntireSelection(
+      [...refineSnapshot.keys()],
+      refineSnapshot
+    );
+  }
+  refineSnapshot = null;
+  refinePaths = [];
+  const hSrc = map.getSource('route-refine-handles');
+  const pSrc = map.getSource('route-refine-preview');
+  if (hSrc) hSrc.setData({ type: 'FeatureCollection', features: [] });
+  if (pSrc) pSrc.setData({ type: 'FeatureCollection', features: [] });
+}
+
+function toggleRefineMode() {
+  if (refineMode) {
+    /* Exit refine but keep the current selection (live commits already applied). */
+    exitRefineMode(false);
+    return;
+  }
+  if (paintMode) togglePaintMode();
+  if (selectedSegments.size === 0) return;
+
+  const order = strokeOrderedSegmentIds.length
+    ? strokeOrderedSegmentIds.slice()
+    : dedupeSelectionHistoryOrder();
+  if (order.length === 0) return;
+
+  const chains = buildMultiChainsFromOrderedIds(order);
+  if (chains.length === 0) return;
+
+  refineSnapshot = new Map(selectedSegments);
+  refinePaths = buildRefinePathsFromChains(chains);
+  if (refinePaths.length === 0 || !refinePaths.some(p => p.handles.length >= 2)) return;
+
+  refineMode = true;
+  refineUndoStack.length = 0;
+  updateRefineUndoUi();
+  document.getElementById('refineBtn').classList.add('active');
+  refineHintEl().classList.add('visible');
+  refineToolbarEl().classList.add('visible');
+  setRefineLayersVisible(true);
+  syncRefineHandleSource();
+  syncRefinePreviewLine();
+  map.doubleClickZoom.disable();
+}
+
+function refineMapMouseDown(e) {
+  if (!refineMode || e.originalEvent.button !== 0) return;
+  const hits = map.queryRenderedFeatures(e.point, { layers: ['route-refine-handles'] });
+  if (!hits.length) return;
+  const pi = hits[0].properties.pathIdx;
+  const hi = hits[0].properties.handleIdx;
+  if (pi === undefined || pi === null || hi === undefined || hi === null) return;
+  refinePreDragSnapshot = snapshotRefineSelection();
+  refineGestureMoved = false;
+  const pathForDrag = refinePaths[pi];
+  if (!pathForDrag || !pathForDrag.handles.length) return;
+  refineDrag = {
+    pathIdx: pi,
+    handleIdx: hi,
+    frozenHandles: pathForDrag.handles.map(h => ({ lng: h.lng, lat: h.lat }))
+  };
+  map.dragPan.disable();
+  refinePointerUpBound = refineGlobalPointerUp;
+  window.addEventListener('pointerup', refinePointerUpBound, true);
+  e.preventDefault();
+  if (e.originalEvent && e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
+}
+
+function refineMapMouseMove(e) {
+  if (!refineMode || !refineDrag) return;
+  const path = refinePaths[refineDrag.pathIdx];
+  const hi = refineDrag.handleIdx;
+  const fh = refineDrag.frozenHandles;
+  if (!path || path.handles.length < 2 || path.handles[hi] === undefined || !fh || fh.length !== path.handles.length) return;
+
+  const snapped = snapRefineHandleToRoadVertex(e.lngLat.lng, e.lngLat.lat);
+  const old = fh[hi];
+  const dLng = snapped.lng - old.lng;
+  const dLat = snapped.lat - old.lat;
+  if (dLng === 0 && dLat === 0) return;
+
+  refineGestureMoved = true;
+  for (let j = 0; j < path.handles.length; j++) {
+    if (j === hi) path.handles[j] = snapped;
+    else path.handles[j] = { lng: fh[j].lng, lat: fh[j].lat };
+  }
+
+  syncRefineHandleSource();
+  syncRefinePreviewLine();
+}
+
+function snapshotRefineHandlePositions() {
+  return refinePaths.map((p, pi) => ({
+    pi,
+    pts: (p.handles || []).map(h => ({ lng: h.lng, lat: h.lat }))
+  }));
+}
+
+/** Deep clone of all refine path handle positions (arrays of lng/lat). */
+function cloneRefineHandlesArrays() {
+  return refinePaths.map(p => (p.handles || []).map(h => ({ lng: h.lng, lat: h.lat })));
+}
+
+/**
+ * After one handle commit + rebuild: drift on **other paths** (pi ≠ pathIdx) and on **same path**
+ * handles whose index was not the edited index — only where before/after lengths match for that path.
+ * `topologyChanged` means path count changed (e.g. 1→3 chains after extend): new paths are not “wrong drift”.
+ */
+function refineMeasureSameShapeAfterCommit(before, pathIdx, handleIdx) {
+  const after = cloneRefineHandlesArrays();
+  const out = {
+    pathCountBefore: before.length,
+    pathCountAfter: after.length,
+    topologyChanged: before.length !== after.length,
+    otherPathsMaxDriftM: 0,
+    otherPathsComparedPairs: 0,
+    otherPathsSkippedLenMismatch: false,
+    samePathOtherMaxDriftM: 0,
+    samePathOtherComparedPairs: 0,
+    samePathSkippedLenMismatch: false
+  };
+  const n = Math.min(before.length, after.length);
+  for (let pi = 0; pi < n; pi++) {
+    const b = before[pi];
+    const a = after[pi];
+    if (!b || !a) continue;
+    if (b.length !== a.length) {
+      if (pi !== pathIdx) out.otherPathsSkippedLenMismatch = true;
+      else out.samePathSkippedLenMismatch = true;
+      continue;
+    }
+    for (let hi = 0; hi < a.length; hi++) {
+      const d = haversineMeters(b[hi].lng, b[hi].lat, a[hi].lng, a[hi].lat);
+      if (pi !== pathIdx) {
+        out.otherPathsComparedPairs++;
+        out.otherPathsMaxDriftM = Math.max(out.otherPathsMaxDriftM, d);
+      } else if (hi !== handleIdx) {
+        out.samePathOtherComparedPairs++;
+        out.samePathOtherMaxDriftM = Math.max(out.samePathOtherMaxDriftM, d);
+      }
+    }
+  }
+  return out;
+}
+
+/** Max meters any handle moved on paths other than `dragPi` (same index; false if counts diverge). */
+function maxNonDragPathHandleDriftM(before, after, dragPi) {
+  let max = 0;
+  let lengthMismatch = false;
+  for (let pi = 0; pi < after.length; pi++) {
+    if (pi === dragPi) continue;
+    const b = before[pi];
+    const a = after[pi];
+    if (!b || !a || !b.pts || !a.pts) continue;
+    if (b.pts.length !== a.pts.length) {
+      lengthMismatch = true;
+      continue;
+    }
+    for (let i = 0; i < a.pts.length; i++) {
+      max = Math.max(
+        max,
+        haversineMeters(b.pts[i].lng, b.pts[i].lat, a.pts[i].lng, a.pts[i].lat)
+      );
+    }
+  }
+  return { maxM: max, lengthMismatch };
+}
+
+function refineMapMouseUp(e) {
+  if (!refineDrag) return;
+  const dragPi = refineDrag.pathIdx;
+  const beforeHandles = refineDebugEnabled() ? snapshotRefineHandlePositions() : null;
+  const pi = refineDrag.pathIdx;
+  const path = refinePaths[pi];
+  if (path) dedupeNearIdenticalRefineHandles(path);
+  const { ordered, propsById } = collectIdsAlongHandlePath();
+  if (ordered.length) replaceEntireSelection(ordered, propsById);
+  detachRefineGlobalPointerUp();
+  refineDrag = null;
+  if (!paintMode) map.dragPan.enable();
+
+  if (refineMode && refineGestureMoved && refinePreDragSnapshot) {
+    const afterSnap = snapshotRefineSelection();
+    if (!selectionSnapshotsEqual(refinePreDragSnapshot, afterSnap)) {
+      refineUndoStack.push(refinePreDragSnapshot);
+      while (refineUndoStack.length > REFINE_UNDO_MAX) refineUndoStack.shift();
+      updateRefineUndoUi();
+    }
+  }
+  refinePreDragSnapshot = null;
+  refineGestureMoved = false;
+
+  if (refineMode) {
+    rebuildRefinePathsAfterLiveCommit();
+    refineDebugDumpNetwork('after mouseup rebuild');
+    if (beforeHandles && refinePaths.length > 1) {
+      const drift = maxNonDragPathHandleDriftM(beforeHandles, snapshotRefineHandlePositions(), dragPi);
+      refineDebugAgentLog(
+        'refineMapMouseUp',
+        'non-drag path handle drift after rebuild',
+        { dragPi, driftMaxM: drift.maxM, driftLengthMismatch: drift.lengthMismatch, pathCount: refinePaths.length },
+        'H-drift'
+      );
+    }
+    syncRefineHandleSource();
+    syncRefinePreviewLine();
+  }
+}
+
+/** Network summary for assertions (stroke order, stitched chains, handle counts). */
+/**
+ * Heuristic audit after handles are built: nearly-coincident consecutive dots (snap pile-up)
+ * and strong chain bends with no nearby handle (intersection-like gap).
+ */
+function refineTest_dotSanityAudit() {
+  const order = strokeOrderedSegmentIds.length ? strokeOrderedSegmentIds.slice() : dedupeSelectionHistoryOrder();
+  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
+  let stackedEdges = 0;
+  let totalEdges = 0;
+  const misses = [];
+  const minTurnAudit = REFINE_MIN_TURN_DEG;
+  for (let pi = 0; pi < refinePaths.length; pi++) {
+    const handles = refinePaths[pi].handles;
+    const ch = pi < chains.length ? chains[pi] : null;
+    for (let i = 1; i < handles.length; i++) {
+      totalEdges++;
+      const d = haversineMeters(handles[i - 1].lng, handles[i - 1].lat, handles[i].lng, handles[i].lat);
+      if (d < REFINE_HANDLE_POST_SNAP_DEDUPE_M) stackedEdges++;
+    }
+    if (!ch || ch.length < 3) continue;
+    const pr = pruneNearDuplicateChainPoints(ch, REFINE_CHAIN_VERTEX_MERGE_M);
+    for (let j = 1; j < pr.length - 1; j++) {
+      const br0 = bearingDeg(pr[j - 1][0], pr[j - 1][1], pr[j][0], pr[j][1]);
+      const br1 = bearingDeg(pr[j][0], pr[j][1], pr[j + 1][0], pr[j + 1][1]);
+      const turn = angleDeltaDeg(br0, br1);
+      if (turn < minTurnAudit) continue;
+      /* Hairpin / stitch-back in stitched polyline — not a missing intersection handle. */
+      if (turn >= 165) continue;
+      const px = pr[j][0], py = pr[j][1];
+      let mind = Infinity;
+      for (let k = 0; k < handles.length; k++) {
+        mind = Math.min(mind, haversineMeters(px, py, handles[k].lng, handles[k].lat));
+      }
+      if (mind > 14) misses.push({ pi, turn: Math.round(turn * 10) / 10, mindM: Math.round(mind) });
+    }
+  }
+  return {
+    paths: refinePaths.length,
+    chainCount: chains.length,
+    stackedEdges,
+    totalEdges,
+    stackedFrac: totalEdges ? Math.round((10000 * stackedEdges) / totalEdges) / 10000 : 0,
+    missedStrongCornerApprox: misses.length,
+    missedSample: misses.slice(0, 5)
+  };
+}
+
+function refineTest_networkSnapshot() {
+  const order = strokeOrderedSegmentIds.length ? strokeOrderedSegmentIds.slice() : dedupeSelectionHistoryOrder();
+  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
+  return {
+    orderLen: order.length,
+    orderHead: order.slice(0, 12).map(String),
+    orderTail: order.slice(-6).map(String),
+    chainCount: chains.length,
+    chainVtxLens: chains.map(c => (c && c.length) || 0),
+    chainTotalM: chains.map(c => (c && c.length >= 2 ? chainTotalArclengthM(c) : 0)),
+    refinePathCount: refinePaths.length,
+    refinePathHandleLens: refinePaths.map(p => (p.handles && p.handles.length) || 0)
+  };
+}
+
+/**
+ * Move one handle (vertex snap), then same commit path as refine pointer-up:
+ * collect → replace → rebuild → sync.
+ */
+function refineTest_applyHandleCommit(pathIdx, handleIdx, lng, lat, label) {
+  if (!refineMode) {
+    return { ok: false, err: 'refineMode off' };
+  }
+  const path = refinePaths[pathIdx];
+  if (!path || handleIdx < 0 || handleIdx >= path.handles.length) {
+    return { ok: false, err: 'bad path/handle', pathIdx, handleIdx };
+  }
+  const handlesBeforeCommit = refineDebugEnabled() ? cloneRefineHandlesArrays() : null;
+  const beforeHandles = refineDebugEnabled() && refinePaths.length > 1
+    ? snapshotRefineHandlePositions()
+    : null;
+  refinePreDragSnapshot = snapshotRefineSelection();
+  refineGestureMoved = true;
+  const before = refineTest_networkSnapshot();
+  path.handles[handleIdx] = snapRefineHandleToRoadVertex(lng, lat);
+  dedupeNearIdenticalRefineHandles(path);
+  const { ordered, propsById } = collectIdsAlongHandlePath();
+  if (ordered.length) replaceEntireSelection(ordered, propsById);
+  if (refineMode && refinePreDragSnapshot) {
+    const afterSnap = snapshotRefineSelection();
+    if (!selectionSnapshotsEqual(refinePreDragSnapshot, afterSnap)) {
+      refineUndoStack.push(refinePreDragSnapshot);
+      while (refineUndoStack.length > REFINE_UNDO_MAX) refineUndoStack.shift();
+      updateRefineUndoUi();
+    }
+  }
+  refinePreDragSnapshot = null;
+  refineGestureMoved = false;
+  if (refineMode) {
+    rebuildRefinePathsAfterLiveCommit();
+    refineDebugDumpNetwork((label || 'refineTest') + ' post-rebuild');
+    if (beforeHandles && refinePaths.length > 1) {
+      const drift = maxNonDragPathHandleDriftM(
+        beforeHandles,
+        snapshotRefineHandlePositions(),
+        pathIdx
+      );
+      refineDebugAgentLog(
+        'refineTest_applyHandleCommit',
+        label || 'programmatic commit',
+        {
+          pathIdx,
+          pathCount: refinePaths.length,
+          driftMaxM: drift.maxM,
+          driftLengthMismatch: drift.lengthMismatch
+        },
+        'H-drift'
+      );
+    }
+    if (handlesBeforeCommit) {
+      const shape = refineMeasureSameShapeAfterCommit(handlesBeforeCommit, pathIdx, handleIdx);
+      refineDebugAgentLog(
+        'refineTest_applyHandleCommit',
+        label || 'same-shape audit',
+        { pathIdx, handleIdx, ...shape },
+        'H-sameshape'
+      );
+    }
+    syncRefineHandleSource();
+    syncRefinePreviewLine();
+  }
+  const after = refineTest_networkSnapshot();
+  return { ok: true, label: label || 'apply', before, after };
+}
+
+function refineTest_nudgeHandleScreen(pathIdx, handleIdx, dxp, dyp, label) {
+  const path = refinePaths[pathIdx];
+  if (!path || !path.handles[handleIdx]) {
+    return { ok: false, err: 'no handle', pathIdx, handleIdx };
+  }
+  const h = path.handles[handleIdx];
+  const p = map.project([h.lng, h.lat]);
+  const ll = map.unproject([p.x + dxp, p.y + dyp]);
+  return refineTest_applyHandleCommit(pathIdx, handleIdx, ll.lng, ll.lat, label);
+}
+
+/** Key test 1: extend route — nudge last handle east-ish on screen (new intersection / segments). */
+function refineTest_scenarioExtendEnd() {
+  const path = refinePaths[0];
+  if (!path || path.handles.length < 2) return { ok: false, err: 'need refine path with handles' };
+  const hi = path.handles.length - 1;
+  return refineTest_nudgeHandleScreen(0, hi, 140, -22, 'scenario extend end');
+}
+
+/** Key test 2: mid-handle diagonal nudge (simulates pulling a corner / right-turn block). */
+function refineTest_scenarioRightTurnMid() {
+  const path = refinePaths[0];
+  if (!path || path.handles.length < 2) return { ok: false, err: 'need refine path with handles' };
+  const hi = Math.max(1, Math.floor(path.handles.length / 2));
+  return refineTest_nudgeHandleScreen(0, hi, 92, 78, 'scenario right turn mid');
+}
+
+/** Key test 3: retract — nudge last handle toward first on screen (fewer intersections / shorter). */
+function refineTest_scenarioShrinkEnd() {
+  const path = refinePaths[0];
+  if (!path || path.handles.length < 2) return { ok: false, err: 'need refine path with handles' };
+  const hi = path.handles.length - 1;
+  const h0 = path.handles[0];
+  const he = path.handles[hi];
+  const p0 = map.project([h0.lng, h0.lat]);
+  const pe = map.project([he.lng, he.lat]);
+  const vx = p0.x - pe.x;
+  const vy = p0.y - pe.y;
+  const len = Math.hypot(vx, vy) || 1;
+  return refineTest_nudgeHandleScreen(0, hi, (vx / len) * 100, (vy / len) * 100, 'scenario shrink end');
+}
+
+/** Compact summary for agent ingest logs (move-out / move-in programmatic suite). */
+function refineAgentSummarizeCommitResult(r) {
+  if (!r || !r.ok) return { ok: false, err: r && r.err };
+  return {
+    ok: true,
+    orderLen: r.after.orderLen,
+    chainCount: r.after.chainCount,
+    refinePathCount: r.after.refinePathCount,
+    orderDelta: r.after.orderLen - r.before.orderLen
+  };
+}
+
+/** Agent-driven: same code as T extend / T shrink / T right (screen nudge + commit). */
+function refineAgentRunMcpSuite() {
+  try {
+    refineDebugSeedNearCenter(10);
+    toggleRefineMode();
+    if (!refineMode) {
+      refineDebugAgentLog('refineAgent', 'suite skip', { err: 'refineMode stayed off' }, 'agent');
+      return;
+    }
+    const base = refineTest_networkSnapshot();
+    refineDebugAgentLog(
+      'refineAgent',
+      'baseline after seed+refine',
+      {
+        orderLen: base.orderLen,
+        chainCount: base.chainCount,
+        refinePathCount: base.refinePathCount
+      },
+      'agent'
+    );
+    const r1 = refineTest_scenarioExtendEnd();
+    refineDebugAgentLog('refineAgent', 'after move-out (extend)', refineAgentSummarizeCommitResult(r1), 'agent');
+    const r2 = refineTest_scenarioShrinkEnd();
+    refineDebugAgentLog('refineAgent', 'after move-in (shrink)', refineAgentSummarizeCommitResult(r2), 'agent');
+    const r3 = refineTest_scenarioRightTurnMid();
+    refineDebugAgentLog('refineAgent', 'after lateral (right)', refineAgentSummarizeCommitResult(r3), 'agent');
+    const dots = refineTest_dotSanityAudit();
+    refineDebugAgentLog('refineAgent', 'dot sanity after three scenarios', dots, 'agent');
+  } catch (err) {
+    refineDebugAgentLog('refineAgent', 'suite error', { err: String(err) }, 'agent');
+  }
+}
+
+/** Multi-path: fractured seed + one end-handle nudge on path 0 (exercises H-drift on other paths). */
+function refineAgentRunFracturedNudgeSuite() {
+  try {
+    refineDebugSeedFractured(10);
+    toggleRefineMode();
+    if (!refineMode) {
+      refineDebugAgentLog('refineAgent', 'fractured suite skip', { err: 'refineMode stayed off' }, 'agent');
+      return;
+    }
+    const base = refineTest_networkSnapshot();
+    refineDebugAgentLog(
+      'refineAgent',
+      'fractured baseline',
+      {
+        orderLen: base.orderLen,
+        chainCount: base.chainCount,
+        refinePathCount: base.refinePathCount
+      },
+      'agent'
+    );
+    const path = refinePaths[0];
+    const hi = path && path.handles.length >= 2 ? path.handles.length - 1 : -1;
+    const r = hi >= 0
+      ? refineTest_nudgeHandleScreen(0, hi, 90, -28, 'agent fractured nudge end')
+      : { ok: false, err: 'no handles' };
+    refineDebugAgentLog(
+      'refineAgent',
+      'after fractured nudge',
+      refineAgentSummarizeCommitResult(r),
+      'agent'
+    );
+  } catch (err) {
+    refineDebugAgentLog('refineAgent', 'fractured suite error', { err: String(err) }, 'agent');
+  }
+}
+// #endregion
+
+/* ════════════════════════════════════════════════════════
+   PAINT MODE — lookahead snap queue, continuity prior, scoped
+   post-stroke prune, undo / click-off
+════════════════════════════════════════════════════════ */
+let paintMode   = false;
+let painting    = false;
+let paintPoints = [];           // { x, y } screen coords of current stroke
+let snapThrottle = null;
+let fadeAnim    = null;
+
+let momX = 0, momY = 0;
+let momReady = false;
+
+const COMMIT_LAG = 8;
+const COMMIT_ALIGN_THRESHOLD = 0.38;
+const COMMIT_ALIGN_RELAXED = 0.22;
+const CONTINUITY_PX = 16;
+const CONTINUITY_SCORE_MULT = 0.58;
+/** Post–pointer-up: only drop segments clearly off the raw stroke (no Chaikin / re-snap). */
+const RAW_PRUNE_SAMPLE_PX = 10;
+const OUTLIER_PRUNE_PX = 62;
+
+const paintCanvas = document.getElementById('paint-canvas');
+const paintCtx    = paintCanvas.getContext('2d');
+const paintHint   = document.getElementById('paint-hint');
+
+let snapQueue = [];
+let selectionHistory = [];
+let lastCommittedEdge = null;
+/** Segment IDs newly committed during the current pointer gesture (for stroke-local prune only). */
+let idsTouchedThisStroke = new Set();
+
+function resizeCanvas() {
+  paintCanvas.width  = window.innerWidth;
+  paintCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function resetSnapQueueForNewStroke() {
+  while (snapQueue.length) {
+    const item = snapQueue.pop();
+    clearPendingIfUnreferenced(item.featureId);
+  }
+}
+
+function togglePaintMode() {
+  if (refineMode) exitRefineMode(true);
+  if (paintMode && painting) {
+    painting = false;
+    if (snapThrottle) { clearTimeout(snapThrottle); snapThrottle = null; }
+    finishStrokePipeline();
+  }
+  paintMode = !paintMode;
+  document.getElementById('paintBtn').classList.toggle('active', paintMode);
+  paintCanvas.style.pointerEvents = paintMode ? 'all' : 'none';
+  paintHint.classList.toggle('visible', paintMode);
+
+  if (paintMode) {
+    map.dragPan.disable();
+    map.scrollZoom.disable();
+    map.doubleClickZoom.disable();
+    map.touchZoomRotate.disable();
+    map.getCanvas().style.cursor = '';
+  } else {
+    map.dragPan.enable();
+    map.scrollZoom.enable();
+    map.doubleClickZoom.enable();
+    map.touchZoomRotate.enable();
+  }
+}
+
+paintCanvas.addEventListener('pointerdown', (e) => {
+  painting = true;
+  lastPointerAlt = e.altKey;
+  paintPoints = [{ x: e.clientX, y: e.clientY }];
+  paintCanvas.setPointerCapture(e.pointerId);
+  cancelFade();
+  resetMomentum();
+  resetSnapQueueForNewStroke();
+  idsTouchedThisStroke.clear();
+});
+
+paintCanvas.addEventListener('pointermove', (e) => {
+  if (!painting) return;
+  lastPointerAlt = e.altKey;
+  paintPoints.push({ x: e.clientX, y: e.clientY });
+  updateMomentum(paintPoints);
+  drawSpline(paintPoints, 0.7);
+
+  if (!snapThrottle) {
+    const pt = { x: e.clientX, y: e.clientY };
+    snapThrottle = setTimeout(() => {
+      if (lastPointerAlt) eraseNearPaintPoint(pt);
+      else enqueuePaintSnap(pt);
+      snapThrottle = null;
+    }, 50);
+  }
+});
+
+paintCanvas.addEventListener('pointerup', (e) => {
+  painting = false;
+  paintPoints.push({ x: e.clientX, y: e.clientY });
+  if (snapThrottle) { clearTimeout(snapThrottle); snapThrottle = null; }
+  enqueuePaintSnap({ x: e.clientX, y: e.clientY });
+  finishStrokePipeline();
+  fadeStroke();
+});
+
+paintCanvas.addEventListener('pointercancel', () => {
+  painting = false;
+  if (snapThrottle) { clearTimeout(snapThrottle); snapThrottle = null; }
+  finishStrokePipeline();
+  fadeStroke();
+});
+
+/* ── Catmull-Rom spline renderer ── */
+function drawSpline(pts, alpha) {
+  if (pts.length < 2) return;
+  paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+  paintCtx.globalAlpha = alpha;
+  paintCtx.strokeStyle = '#2563eb';
+  paintCtx.lineWidth   = 4;
+  paintCtx.lineJoin    = 'round';
+  paintCtx.lineCap     = 'round';
+  paintCtx.beginPath();
+  paintCtx.moveTo(pts[0].x, pts[0].y);
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    paintCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+  }
+  paintCtx.stroke();
+  paintCtx.globalAlpha = 1;
+}
+
+/* ── Fade stroke out over ~400ms after pointer lift ── */
+function cancelFade() {
+  if (fadeAnim) { clearInterval(fadeAnim); fadeAnim = null; }
+  paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+}
+
+function fadeStroke() {
+  if (paintPoints.length < 2) return;
+  let alpha = 0.7;
+  fadeAnim = setInterval(() => {
+    alpha -= 0.07;
+    if (alpha <= 0) {
+      clearInterval(fadeAnim);
+      fadeAnim = null;
+      paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+      return;
+    }
+    drawSpline(paintPoints, alpha);
+  }, 30);
+}
+
+const MOMENTUM_SMOOTH = 0.25;
+const MIN_MOVE        = 12;
+const PERP_PENALTY    = 3.5;
+const SNAP_RADIUS     = 40;
+
+function resetMomentum() {
+  momX = 0; momY = 0; momReady = false;
+}
+
+function updateMomentum(pts) {
+  if (pts.length < 3) return;
+  const lookback = Math.min(10, pts.length - 1);
+  const p0 = pts[pts.length - 1 - lookback];
+  const p1 = pts[pts.length - 1];
+  const dx = p1.x - p0.x, dy = p1.y - p0.y;
+  const len = Math.hypot(dx, dy);
+  if (len < MIN_MOVE) return;
+
+  const nx = dx / len, ny = dy / len;
+  momX = momX * (1 - MOMENTUM_SMOOTH) + nx * MOMENTUM_SMOOTH;
+  momY = momY * (1 - MOMENTUM_SMOOTH) + ny * MOMENTUM_SMOOTH;
+  const mlen = Math.hypot(momX, momY);
+  if (mlen > 0) { momX /= mlen; momY /= mlen; }
+  momReady = true;
+}
+
+function ptSegDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - ax, py - ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+function getStrokeDirectionFrom(pts, fromIdx, span) {
+  const toIdx = Math.min(fromIdx + Math.max(span, 4), pts.length - 1);
+  if (toIdx <= fromIdx) return null;
+  const p0 = pts[fromIdx], p1 = pts[toIdx];
+  const dx = p1.x - p0.x, dy = p1.y - p0.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 5) return null;
+  return { nx: dx / len, ny: dy / len };
+}
+
+function clearPendingIfUnreferenced(featureId) {
+  if (selectedSegments.has(featureId)) return;
+  const still = snapQueue.some(q => q.featureId === featureId);
+  if (!still) {
+    map.setFeatureState(
+      { source: 'segments', sourceLayer: 'update_score_v2', id: featureId },
+      { pending: false }
+    );
+  }
+}
+
+function findBestCandidate(pt, opts) {
+  opts = opts || {};
+  const ovr = opts.dirOverride;
+  const useNx = ovr && ovr.ready ? ovr.nx : momX;
+  const useNy = ovr && ovr.ready ? ovr.ny : momY;
+  const useReady = ovr ? !!ovr.ready : momReady;
+  const allowSelected = opts.allowSelected === true;
+  const avoidRevisit = opts.avoidRevisit === true;
+  const onlyFeatureIds = opts.onlyFeatureIds;
+
+  const bbox = [
+    [pt.x - SNAP_RADIUS, pt.y - SNAP_RADIUS],
+    [pt.x + SNAP_RADIUS, pt.y + SNAP_RADIUS]
+  ];
+  const features = map.queryRenderedFeatures(bbox, { layers: ['road-score'] });
+  if (!features.length) return null;
+
+  let minScore = SNAP_RADIUS * PERP_PENALTY;
+  let best = null;
+
+  for (let fi = 0; fi < features.length; fi++) {
+    const f = features[fi];
+    if (!f.geometry) continue;
+    const candFid = f.id !== undefined ? f.id : f.properties.ogc_fid;
+    const candFidStr = candFid == null ? null : String(candFid);
+    if (onlyFeatureIds && onlyFeatureIds.size && candFidStr != null && !onlyFeatureIds.has(candFidStr)) {
+      continue;
+    }
+    const lines = f.geometry.type === 'LineString'
+      ? [f.geometry.coordinates]
+      : f.geometry.coordinates;
+
+    for (let li = 0; li < lines.length; li++) {
+      const coords = lines[li];
+      for (let i = 0; i < coords.length - 1; i++) {
+        const a = map.project([coords[i][0], coords[i][1]]);
+        const b = map.project([coords[i + 1][0], coords[i + 1][1]]);
+        const dist = ptSegDist(pt.x, pt.y, a.x, a.y, b.x, b.y);
+        if (dist >= SNAP_RADIUS) continue;
+
+        let penalty = 1;
+        if (useReady) {
+          const sdx = b.x - a.x, sdy = b.y - a.y;
+          const slen = Math.hypot(sdx, sdy);
+          if (slen > 0) {
+            const alignment = Math.abs((sdx / slen) * useNx + (sdy / slen) * useNy);
+            penalty = PERP_PENALTY - (PERP_PENALTY - 1) * alignment;
+          }
+        }
+
+        let contMult = 1;
+        if (lastCommittedEdge) {
+          const d1 = Math.hypot(a.x - lastCommittedEdge.ax, a.y - lastCommittedEdge.ay);
+          const d2 = Math.hypot(a.x - lastCommittedEdge.bx, a.y - lastCommittedEdge.by);
+          const d3 = Math.hypot(b.x - lastCommittedEdge.ax, b.y - lastCommittedEdge.ay);
+          const d4 = Math.hypot(b.x - lastCommittedEdge.bx, b.y - lastCommittedEdge.by);
+          if (Math.min(d1, d2, d3, d4) < CONTINUITY_PX) contMult = CONTINUITY_SCORE_MULT;
+        }
+
+        let score = dist * penalty * contMult;
+        const featureId = f.id !== undefined ? f.id : f.properties.ogc_fid;
+        if (avoidRevisit && selectedSegments.has(featureId)) score *= AVOID_REVISIT_MULT;
+
+        if (score < minScore) {
+          minScore = score;
+          const sdx = b.x - a.x, sdy = b.y - a.y;
+          const slen = Math.hypot(sdx, sdy) || 1;
+          best = {
+            featureId,
+            props: f.properties,
+            segNx: sdx / slen,
+            segNy: sdy / slen,
+            edge: { ax: a.x, ay: a.y, bx: b.x, by: b.y },
+            vertexLLA: [coords[i][0], coords[i][1]],
+            vertexLLB: [coords[i + 1][0], coords[i + 1][1]]
+          };
+        }
+      }
+    }
+  }
+
+  if (!best || best.featureId === undefined || best.featureId === null) return null;
+  if (!allowSelected && selectedSegments.has(best.featureId)) return null;
+  return best;
+}
+
+function commitSegment(featureId, props, edge) {
+  if (selectedSegments.has(featureId)) return;
+  selectedSegments.set(featureId, props);
+  selectionHistory.push(featureId);
+  idsTouchedThisStroke.add(featureId);
+  if (strokeOrderedSegmentIds[strokeOrderedSegmentIds.length - 1] !== featureId) {
+    strokeOrderedSegmentIds.push(featureId);
+  }
+  if (edge) lastCommittedEdge = edge;
+  map.setFeatureState(
+    { source: 'segments', sourceLayer: 'update_score_v2', id: featureId },
+    { selected: true, pending: false }
+  );
+  updateBadge();
+}
+
+function commitFromQueueItem(item) {
+  commitSegment(item.featureId, item.props, item.edge);
+}
+
+function tryDrainSnapQueue() {
+  while (snapQueue.length >= COMMIT_LAG) {
+    const head = snapQueue[0];
+    if (paintPoints.length - 1 < head.strokeIdx + 4) return;
+
+    snapQueue.shift();
+    clearPendingIfUnreferenced(head.featureId);
+
+    const span = Math.min(COMMIT_LAG + 4, paintPoints.length - 1 - head.strokeIdx);
+    const dir = getStrokeDirectionFrom(paintPoints, head.strokeIdx, span);
+    let commit = false;
+    if (dir) {
+      const al = Math.abs(dir.nx * head.segNx + dir.ny * head.segNy);
+      commit = al >= COMMIT_ALIGN_THRESHOLD;
+    }
+    if (commit) commitFromQueueItem(head);
+  }
+}
+
+function removeSegmentCompletely(featureId) {
+  if (!selectedSegments.has(featureId)) return;
+  selectedSegments.delete(featureId);
+  for (let i = selectionHistory.length - 1; i >= 0; i--) {
+    if (selectionHistory[i] === featureId) selectionHistory.splice(i, 1);
+  }
+  strokeOrderedSegmentIds = strokeOrderedSegmentIds.filter(x => x !== featureId);
+  map.setFeatureState(
+    { source: 'segments', sourceLayer: 'update_score_v2', id: featureId },
+    { selected: false, pending: false }
+  );
+  updateBadge();
+  if (selectedSegments.size === 0) lastCommittedEdge = null;
+}
+
+function eraseNearPaintPoint(pt) {
+  const toRemove = new Set();
+  const bbox = [[pt.x - 44, pt.y - 44], [pt.x + 44, pt.y + 44]];
+  const features = map.queryRenderedFeatures(bbox, { layers: ['road-score'] });
+  const seenFeat = new Set();
+  for (let fi = 0; fi < features.length; fi++) {
+    const f = features[fi];
+    const key = f.properties && f.properties.ogc_fid != null ? String(f.properties.ogc_fid) : fi + '_' + fi;
+    if (!f.geometry || seenFeat.has(key)) continue;
+    seenFeat.add(key);
+    const fid = f.id !== undefined ? f.id : f.properties.ogc_fid;
+    if (fid === undefined || fid === null || !selectedSegments.has(fid)) continue;
+    const lines = f.geometry.type === 'LineString'
+      ? [f.geometry.coordinates]
+      : f.geometry.coordinates;
+    for (let li = 0; li < lines.length; li++) {
+      const coords = lines[li];
+      for (let i = 0; i < coords.length - 1; i++) {
+        const a = map.project([coords[i][0], coords[i][1]]);
+        const b = map.project([coords[i + 1][0], coords[i + 1][1]]);
+        const dist = ptSegDist(pt.x, pt.y, a.x, a.y, b.x, b.y);
+        if (dist < 28) toRemove.add(fid);
+      }
+    }
+  }
+  toRemove.forEach(id => removeSegmentCompletely(id));
+}
+
+function enqueuePaintSnap(pt) {
+  const cand = findBestCandidate(pt, { avoidRevisit: true });
+  if (!cand) return;
+
+  snapQueue.push({
+    featureId: cand.featureId,
+    props: cand.props,
+    strokeIdx: paintPoints.length - 1,
+    segNx: cand.segNx,
+    segNy: cand.segNy,
+    edge: cand.edge
+  });
+
+  if (!selectedSegments.has(cand.featureId)) {
+    map.setFeatureState(
+      { source: 'segments', sourceLayer: 'update_score_v2', id: cand.featureId },
+      { pending: true }
+    );
+  }
+  tryDrainSnapQueue();
+}
+
+function flushSnapQueueRelaxed() {
+  while (snapQueue.length > 0) {
+    const item = snapQueue.shift();
+    clearPendingIfUnreferenced(item.featureId);
+    if (selectedSegments.has(item.featureId)) continue;
+
+    const span = Math.max(paintPoints.length - 1 - item.strokeIdx, 4);
+    const dir = getStrokeDirectionFrom(paintPoints, item.strokeIdx, span);
+    let commit = true;
+    if (dir) {
+      const al = Math.abs(dir.nx * item.segNx + dir.ny * item.segNy);
+      if (al < COMMIT_ALIGN_RELAXED) commit = false;
+    }
+    if (commit) commitFromQueueItem(item);
+  }
+}
+
+function resampleUniform(pts, stepPx) {
+  if (pts.length < 2) return pts.map(p => ({ x: p.x, y: p.y }));
+  const out = [];
+  let cx = pts[0].x, cy = pts[0].y;
+  out.push({ x: cx, y: cy });
+  let segIdx = 0;
+  while (segIdx < pts.length - 1) {
+    const tx = pts[segIdx + 1].x, ty = pts[segIdx + 1].y;
+    const dx = tx - cx, dy = ty - cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1e-6) { segIdx++; cx = tx; cy = ty; continue; }
+    if (dist >= stepPx) {
+      const t = stepPx / dist;
+      cx += dx * t;
+      cy += dy * t;
+      out.push({ x: cx, y: cy });
+    } else {
+      segIdx++;
+      cx = tx; cy = ty;
+    }
+  }
+  const last = pts[pts.length - 1];
+  const end = out[out.length - 1];
+  if (Math.hypot(last.x - end.x, last.y - end.y) > 2) out.push({ x: last.x, y: last.y });
+  return out;
+}
+
+function querySegmentFeatureById(fid) {
+  try {
+    const feats = map.querySourceFeatures('segments', { sourceLayer: 'update_score_v2' });
+    return feats.find(f => f.properties && String(f.properties.ogc_fid) === String(fid)) || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function segmentMinDistToPolylineScreen(fid, smoothPts) {
+  const feat = querySegmentFeatureById(fid);
+  if (!feat || !feat.geometry) return null;
+  let minD = 1e9;
+  const lines = feat.geometry.type === 'LineString'
+    ? [feat.geometry.coordinates]
+    : feat.geometry.coordinates;
+  lines.forEach(coords => {
+    for (let i = 0; i < coords.length - 1; i++) {
+      for (const t of [0, 0.2, 0.5, 0.8, 1]) {
+        const lng = coords[i][0] + (coords[i + 1][0] - coords[i][0]) * t;
+        const lat = coords[i][1] + (coords[i + 1][1] - coords[i][1]) * t;
+        const p = map.project([lng, lat]);
+        for (let j = 0; j < smoothPts.length - 1; j++) {
+          const d = ptSegDist(
+            p.x, p.y,
+            smoothPts[j].x, smoothPts[j].y,
+            smoothPts[j + 1].x, smoothPts[j + 1].y
+          );
+          minD = Math.min(minD, d);
+        }
+      }
+    }
+  });
+  return minD === 1e9 ? null : minD;
+}
+
+/** Drop only segments added *this stroke* that sit far from *this stroke's* path.
+    Earlier painted segments are never judged against the new polyline. */
+function pruneSelectionsFarFromRawPolyline(rawChain) {
+  if (rawChain.length < 2 || idsTouchedThisStroke.size === 0) return;
+  const drop = [];
+  idsTouchedThisStroke.forEach(id => {
+    if (!selectedSegments.has(id)) return;
+    const md = segmentMinDistToPolylineScreen(id, rawChain);
+    if (md !== null && md > OUTLIER_PRUNE_PX) drop.push(id);
+  });
+  drop.forEach(removeSegmentSelection);
+}
+
+function finishStrokePipeline() {
+  flushSnapQueueRelaxed();
+  if (paintPoints.length >= 2) {
+    const rawChain = resampleUniform(paintPoints, RAW_PRUNE_SAMPLE_PX);
+    if (rawChain.length >= 2) pruneSelectionsFarFromRawPolyline(rawChain);
+  }
+  if (idsTouchedThisStroke.size > 0) {
+    strokeBatchesHistory.push([...idsTouchedThisStroke]);
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   SELECTION STATE
+════════════════════════════════════════════════════════ */
+const selectedSegments = new Map();
+
+function updateBadge() {
+  const n = selectedSegments.size;
+  const badge = document.getElementById('selection-badge');
+  badge.style.display = n > 0 ? 'flex' : 'none';
+  document.getElementById('badge-count').textContent = `${n} segment${n !== 1 ? 's' : ''} selected`;
+  const undoBtn = document.getElementById('badge-undo');
+  if (undoBtn) undoBtn.disabled = selectionHistory.length === 0;
+  const us = document.getElementById('badge-undo-stroke');
+  if (us) us.disabled = strokeBatchesHistory.length === 0;
+}
+
+function undoLastPaintStroke() {
+  const batch = strokeBatchesHistory.pop();
+  if (!batch || !batch.length) {
+    updateBadge();
+    return;
+  }
+  batch.forEach(id => removeSegmentCompletely(id));
+}
+
+function removeSegmentSelection(featureId) {
+  if (!selectedSegments.has(featureId)) return;
+  selectedSegments.delete(featureId);
+  for (let i = selectionHistory.length - 1; i >= 0; i--) {
+    if (selectionHistory[i] === featureId) {
+      selectionHistory.splice(i, 1);
+      break;
+    }
+  }
+  for (let i = strokeOrderedSegmentIds.length - 1; i >= 0; i--) {
+    if (strokeOrderedSegmentIds[i] === featureId) {
+      strokeOrderedSegmentIds.splice(i, 1);
+      break;
+    }
+  }
+  map.setFeatureState(
+    { source: 'segments', sourceLayer: 'update_score_v2', id: featureId },
+    { selected: false, pending: false }
+  );
+  updateBadge();
+  if (selectedSegments.size === 0) lastCommittedEdge = null;
+}
+
+function undoLastSegment() {
+  if (!selectionHistory.length) return;
+  const id = selectionHistory.pop();
+  if (!selectedSegments.has(id)) {
+    updateBadge();
+    return;
+  }
+  selectedSegments.delete(id);
+  map.setFeatureState(
+    { source: 'segments', sourceLayer: 'update_score_v2', id: id },
+    { selected: false, pending: false }
+  );
+  updateBadge();
+  if (selectedSegments.size === 0) lastCommittedEdge = null;
+}
+
+function clearSelection() {
+  if (refineMode) exitRefineMode(false);
+  resetSnapQueueForNewStroke();
+  idsTouchedThisStroke.clear();
+  strokeBatchesHistory.length = 0;
+  strokeOrderedSegmentIds.length = 0;
+  selectionHistory.length = 0;
+  lastCommittedEdge = null;
+  selectedSegments.forEach((_, id) => {
+    map.setFeatureState(
+      { source: 'segments', sourceLayer: 'update_score_v2', id },
+      { selected: false, pending: false }
+    );
+  });
+  selectedSegments.clear();
+  updateBadge();
+}
+
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+
+  if (refineMode && e.key === 'Escape') {
+    e.preventDefault();
+    exitRefineMode(true);
+    return;
+  }
+
+  if (!(e.ctrlKey || e.metaKey)) return;
+  if (e.key !== 'z' && e.key !== 'Z') return;
+  if (refineMode && refineUndoStack.length > 0) {
+    e.preventDefault();
+    refineUndoLast();
+    return;
+  }
+  if (!selectionHistory.length) return;
+  e.preventDefault();
+  undoLastSegment();
+});
+
+/* ════════════════════════════════════════════════════════
+   SURVEY PANEL (LTS-focused; score_model tags payload for multi-model backends)
+════════════════════════════════════════════════════════ */
+const FEEDBACK_SCORE_MODEL = 'lts';
+
+let surveyRating         = null; /* optional 1–5 comfort */
+let surveyTime           = null;
+let surveyPerceivedLts   = null; /* 1–4, required */
+let surveyMapLtsCalib    = null; /* too_optimistic | about_right | too_pessimistic */
+let surveyTrafficVol     = null; /* low | medium | high, optional */
+
+function parseLtsFromProps(p) {
+  const v = p && p.lts_level;
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function computeSelectionLtsLevels() {
+  const set = new Set();
+  selectedSegments.forEach(p => {
+    const n = parseLtsFromProps(p);
+    if (n !== null) set.add(n);
+  });
+  return [...set].sort((a, b) => a - b);
+}
+
+function updateSurveyLtsSummary() {
+  const el = document.getElementById('survey-lts-model-summary');
+  const levels = computeSelectionLtsLevels();
+  if (!levels.length) {
+    el.textContent = 'Map LTS: not available for every segment in this selection. You can still report how it felt and whether the map felt accurate.';
+    el.classList.add('survey-lts-summary--warn');
+    return;
+  }
+  el.classList.remove('survey-lts-summary--warn');
+  const n = selectedSegments.size;
+  if (levels.length === 1) {
+    el.innerHTML = `<strong>Map model (LTS):</strong> all <strong>${n}</strong> segment(s) are colored as <strong>LTS ${levels[0]}</strong>.`;
+  } else {
+    el.innerHTML = `<strong>Map model (LTS):</strong> from <strong>LTS ${levels[0]}</strong> to <strong>LTS ${levels[levels.length - 1]}</strong> across <strong>${n}</strong> segment(s). Use one consistent lens (whole route or worst part).`;
+  }
+}
+
+function openSurveyPanel() {
+  if (refineMode) exitRefineMode(false);
+  document.getElementById('survey-seg-count').textContent = selectedSegments.size;
+  document.getElementById('survey-panel').classList.add('open');
+  // Reset form state
+  surveyRating = null;
+  surveyTime = null;
+  surveyPerceivedLts = null;
+  surveyMapLtsCalib = null;
+  surveyTrafficVol = null;
+  document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#time-grid .time-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.traffic-vol-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.lts-pick-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.map-cal-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.check-item input').forEach(cb => { cb.checked = false; cb.closest('.check-item').classList.remove('checked'); });
+  document.getElementById('survey-comments').value = '';
+  document.getElementById('survey-submit').disabled = true;
+  document.getElementById('survey-form-body').style.display = 'flex';
+  document.getElementById('survey-confirm').style.display = 'none';
+  updateSurveyLtsSummary();
+  // Turn off paint mode while survey is open
+  if (paintMode) togglePaintMode();
+}
+
+function closeSurveyPanel() {
+  document.getElementById('survey-panel').classList.remove('open');
+}
+
+function setRating(val) {
+  surveyRating = val;
+  document.querySelectorAll('.rating-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.val, 10) === val);
+  });
+  validateSurvey();
+}
+
+function setTime(val) {
+  surveyTime = val;
+  document.querySelectorAll('#time-grid .time-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.val === val);
+  });
+  validateSurvey();
+}
+
+function setPerceivedLts(val) {
+  surveyPerceivedLts = val;
+  document.querySelectorAll('.lts-pick-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.lts, 10) === val);
+  });
+  validateSurvey();
+}
+
+function setMapLtsCalib(val) {
+  surveyMapLtsCalib = val;
+  document.querySelectorAll('.map-cal-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.cal === val);
+  });
+  validateSurvey();
+}
+
+function setTrafficVol(val) {
+  surveyTrafficVol = val;
+  document.querySelectorAll('.traffic-vol-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.val === val);
+  });
+  validateSurvey();
+}
+
+// Sync checked visual state on checkbox change
+document.querySelectorAll('.check-item input').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.check-item').classList.toggle('checked', cb.checked);
+  });
+});
+
+function validateSurvey() {
+  const ok = surveyPerceivedLts != null && surveyMapLtsCalib != null && surveyTime != null;
+  document.getElementById('survey-submit').disabled = !ok;
+}
+
+function submitFeedback() {
+  const factors = [...document.querySelectorAll('.check-item input:checked')].map(cb => cb.value);
+  const selectionLtsLevels = computeSelectionLtsLevels();
+  const payload = {
+    score_model: FEEDBACK_SCORE_MODEL,
+    segments: [...selectedSegments.keys()],
+    segment_data: [...selectedSegments.values()].map(p => ({
+      ogc_fid: p.ogc_fid,
+      route_name: p.route_name,
+      score: p.user_score,
+      lts_level: parseLtsFromProps(p),
+      bike_facility_type: p.bike_facility_type ?? null,
+      speed_limit_raw: p.speed_limit_raw ?? null,
+      num_lanes_raw: p.num_lanes_raw ?? null
+    })),
+    selection_lts_levels: selectionLtsLevels,
+    perceived_lts: surveyPerceivedLts,
+    map_lts_calibration: surveyMapLtsCalib,
+    time_of_day: surveyTime,
+    perceived_motor_traffic: surveyTrafficVol,
+    safety_rating: surveyRating,
+    factors,
+    comments: document.getElementById('survey-comments').value.trim(),
+    submitted_at: new Date().toISOString()
+  };
+
+  console.log('%c📍 Feedback payload', 'font-size:14px;font-weight:bold;color:#1d4ed8');
+  console.log(payload);
+
+  // Show confirmation
+  document.getElementById('survey-form-body').style.display = 'none';
+  const confirm = document.getElementById('survey-confirm');
+  confirm.style.display = 'flex';
+  document.getElementById('confirm-count').textContent = payload.segments.length;
+}
+
+function resetAfterSubmit() {
+  closeSurveyPanel();
+  clearSelection();
+  document.getElementById('survey-confirm').style.display = 'none';
+}
+</script>
+</body>
+</html>

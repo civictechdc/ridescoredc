@@ -1,0 +1,13 @@
+# Python deps for mvp_map/data_processing.ipynb.
+# pip install -r requirements.txt
+
+folium>=0.15.0
+geopandas>=1.0.0
+jupyter>=1.0.0
+matplotlib>=3.7.0
+numpy>=1.24.0
+osmnx>=1.9.0
+pandas>=2.0.0
+python-dateutil>=2.8.0
+requests>=2.31.0
+shapely>=2.0.0

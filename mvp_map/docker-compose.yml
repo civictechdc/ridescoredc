@@ -7,6 +7,9 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db/db
       - MARTIN_CACHE_SIZE=0
+    volumes:
+      - ./martin.yaml:/martin.yaml
+    command: ["--config", "/martin.yaml"]
     depends_on:
       - db
 
