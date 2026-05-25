@@ -14,7 +14,7 @@
 
   /* ── Logo ── */
   #logo-box {
-    position: fixed; top: 12px; right: 12px; z-index: 900;
+    position: fixed; top: 12px; right: 12px; z-index: 950;
     background: #1a1a2e; color: #fff;
     border-radius: 8px; padding: 6px 12px;
     display: flex; align-items: center; gap: 7px;
@@ -43,6 +43,10 @@
   .controls {
     position: fixed; top: 12px; left: 12px; z-index: 900;
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: 420px;
+  }
+  @media (max-width: 768px) {
+    /* Push controls below the DC Bike Safety logo button so they never overlap */
+    .controls { top: 52px; }
   }
   .ctrl-btn {
     background: #fff; border: 1px solid #d1d5db; color: #334155;
@@ -121,19 +125,30 @@
 
   /* Hint strip shown while paint mode is active */
   #paint-hint {
-    position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%);
     background: rgba(29, 78, 216, 0.88); color: #fff;
     border-radius: 8px; padding: 9px 16px;
-    font: 500 12px/1 'Inter', sans-serif;
+    font: 500 12px/1.4 'Inter', sans-serif;
     pointer-events: none; z-index: 600;
     opacity: 0; transition: opacity .2s ease;
-    white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,.2);
+    max-width: min(420px, 92vw); text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,.2);
   }
   #paint-hint.visible { opacity: 1; }
 
-  #refine-hint {
-    position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
-    background: rgba(234, 88, 12, 0.92); color: #fff;
+  /* Unpaint canvas — above map when Unpaint mode is on */
+  #unpaint-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 501;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  #unpaint-hint {
+    position: fixed; bottom: 180px; left: 50%; transform: translateX(-50%);
+    background: rgba(185, 28, 28, 0.92); color: #fff;
     border-radius: 8px; padding: 9px 16px;
     font: 500 12px/1.35 'Inter', sans-serif;
     pointer-events: none; z-index: 600;
@@ -141,37 +156,22 @@
     max-width: min(420px, 92vw); text-align: center;
     box-shadow: 0 2px 10px rgba(0,0,0,.2);
   }
-  #refine-hint.visible { opacity: 1; }
+  #unpaint-hint.visible { opacity: 1; }
 
-  #refine-toolbar {
-    position: fixed; bottom: 168px; left: 50%; transform: translateX(-50%);
-    display: none; align-items: center; gap: 10px; z-index: 610;
-    background: rgba(255,255,255,.96); border: 1px solid #fed7aa;
-    border-radius: 10px; padding: 8px 14px; box-shadow: 0 2px 12px rgba(0,0,0,.12);
-    font: 500 12px/1.35 'Inter', sans-serif; color: #431407;
-  }
-  #refine-toolbar.visible { display: flex; }
-  #refine-toolbar button {
-    border: none; border-radius: 8px; padding: 7px 14px;
-    font: 600 12px 'Inter', sans-serif; cursor: pointer; background: #fff7ed;
-    color: #9a3412; border: 1px solid #fdba74;
-  }
-  #refine-toolbar button:hover:not(:disabled) { background: #ffedd5; }
-  #refine-toolbar button:disabled { opacity: .45; cursor: default; }
-
-  #refineBtn.active { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
-  #refineBtn.active::before { background: #ea580c; }
+  #unpaintBtn.active { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+  #unpaintBtn.active::before { background: #dc2626; }
 
   /* Selection badge — bottom-centre, appears when ≥1 segment selected */
   #selection-badge {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: #1d4ed8; color: #fff;
-    border-radius: 999px; padding: 9px 8px 9px 16px;
+    border-radius: 16px; padding: 9px 10px 9px 16px;
     font: 600 13px/1 'Inter', sans-serif;
     z-index: 900; display: none; align-items: center; gap: 8px;
     box-shadow: 0 4px 16px rgba(29,78,216,.4);
-    white-space: nowrap;
+    white-space: nowrap; flex-wrap: wrap; max-width: min(340px, calc(100vw - 32px));
   }
+  #badge-rate-break { flex-basis: 100%; height: 0; }
   #badge-count { opacity: .9; }
   .badge-btn {
     border: none; border-radius: 999px; padding: 5px 13px;
@@ -185,8 +185,12 @@
   #badge-undo-stroke { background: rgba(255,255,255,.12); color: #fff; }
   #badge-undo-stroke:hover { background: rgba(255,255,255,.22); }
   #badge-undo-stroke:disabled { opacity: .35; cursor: default; }
-  #badge-rate { background: #fff; color: #1d4ed8; }
+  #badge-rate { background: #fff; color: #1d4ed8; width: 100%; text-align: center; border-radius: 8px; padding: 7px 13px; }
   #badge-rate:hover { background: #eff6ff; }
+  @media (max-width: 768px) {
+    #badge-undo-stroke { display: none; }
+    #selection-badge { padding: 8px 8px 8px 14px; gap: 6px; max-width: calc(100vw - 32px); }
+  }
 
   /* Survey panel — slides in from right */
   #survey-panel {
@@ -318,15 +322,236 @@
   #survey-submit:hover { background: #2d2d4e; }
   #survey-submit:disabled { background: #94a3b8; cursor: default; }
 
-  /* Submission confirmation */
-  #survey-confirm {
-    display: none; flex-direction: column; align-items: center;
-    padding: 48px 24px; text-align: center; gap: 12px;
+  /* ── Survey sheet (bottom on mobile, right panel on desktop) ── */
+  body.survey-active #map { transition: bottom 0.3s ease; }
+
+  @media (max-width: 768px) {
+    body.survey-active #map { bottom: 50vh; }
   }
-  #survey-confirm .confirm-icon { font-size: 40px; }
-  #survey-confirm h3 { margin: 0; font-size: 16px; color: #1a1a2e; }
-  #survey-confirm p { margin: 0; font-size: 12px; color: #64748b; line-height: 1.5; }
-  #survey-confirm button { margin-top: 8px; padding: 10px 24px; border: none; border-radius: 8px; background: #1a1a2e; color: #fff; font: 600 13px 'Inter'; cursor: pointer; }
+
+  #survey-sheet {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 50vh; background: #fff;
+    border-radius: 20px 20px 0 0;
+    border-top: 0.5px solid #d3d1c7;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.12);
+    z-index: 1000;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  }
+  #survey-sheet.open { display: flex; }
+
+  @media (min-width: 769px) {
+    #survey-sheet {
+      left: auto; right: 0; top: 0; bottom: 0;
+      height: auto; width: 380px;
+      border-radius: 0; border-top: none;
+      border-left: 0.5px solid #d3d1c7;
+      box-shadow: -4px 0 20px rgba(0,0,0,.12);
+    }
+  }
+
+  .ss-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: #888780; margin: 10px auto 0; flex-shrink: 0;
+  }
+  @media (min-width: 769px) { .ss-handle { display: none; } }
+
+  .ss-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 16px 6px; border-bottom: 0.5px solid #e8e6e0; flex-shrink: 0;
+  }
+  .ss-hdr-title { font-size: 13px; font-weight: 600; color: #2c2c2a; }
+  .ss-hdr-sub   { font-size: 11px; color: #888780; margin-top: 1px; }
+  .ss-prog-pill {
+    font-size: 11px; color: #185fa5; background: #e6f1fb;
+    padding: 3px 9px; border-radius: 99px; font-weight: 500; white-space: nowrap;
+  }
+  .ss-close {
+    background: none; border: none; cursor: pointer;
+    color: #888780; font-size: 18px; line-height: 1; padding: 0 0 0 8px; flex-shrink: 0;
+  }
+
+  /* Segment track */
+  .ss-track-outer {
+    flex-shrink: 0; border-bottom: 0.5px solid #e8e6e0;
+    position: relative; overflow: hidden; height: 62px;
+  }
+  .ss-track-scroll {
+    display: flex; align-items: flex-start; height: 100%;
+    overflow-x: auto; scrollbar-width: none;
+    padding: 10px 16px 0; gap: 0; cursor: grab; user-select: none;
+  }
+  .ss-track-scroll::-webkit-scrollbar { display: none; }
+  .ss-track-scroll.dragging { cursor: grabbing; }
+  .ss-fade-l, .ss-fade-r {
+    position: absolute; top: 0; bottom: 0; width: 20px;
+    pointer-events: none; z-index: 2;
+  }
+  .ss-fade-l { left: 0;  background: linear-gradient(to right, #ffffff, transparent); }
+  .ss-fade-r { right: 0; background: linear-gradient(to left,  #ffffff, transparent); }
+
+  .ss-seg { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+  .ss-node {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid #d3d1c7; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s; flex-shrink: 0; font-size: 8px; font-weight: 500; color: #b4b2a9;
+  }
+  .ss-node.done    { background: #639922; border-color: #639922; color: #fff; font-size: 9px; }
+  .ss-node.active  { background: #378add; border-color: #378add; color: #fff; width: 24px; height: 24px; }
+  .ss-node.pending { background: #fff; border-color: #d3d1c7; }
+  .ss-seg:hover .ss-node:not(.active) { border-color: #378add; color: #378add; transform: scale(1.15); }
+  .ss-seg:hover .ss-node.done { background: #4e7c1a; border-color: #4e7c1a; color: #fff; }
+  .ss-seg:active .ss-node:not(.active) { background: #dceeff; border-color: #1a6bbf; transform: scale(1.1); }
+  .ss-name-wrap { width: 54px; margin-top: 4px; text-align: center; }
+  .ss-name {
+    font-size: 9px; color: #888780; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 52px; display: block; line-height: 1.3;
+  }
+  .ss-name.active { color: #185fa5; font-weight: 500; }
+  .ss-name.done   { color: #3b6d11; }
+  .ss-bar { height: 3px; flex-shrink: 0; margin-top: 9px; width: 14px; }
+
+  /* Question panel */
+  .ss-q-area { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
+  .ss-q-slide {
+    padding: 10px 16px 6px; display: flex; flex-direction: column; gap: 8px;
+    transition: transform 0.2s ease, opacity 0.16s;
+  }
+  .ss-q-road   { font-size: 13px; font-weight: 600; color: #2c2c2a; }
+  .ss-divider  { height: 0.5px; background: #e8e6e0; margin: 2px 0; }
+  .ss-q-label  { font-size: 14px; font-weight: 600; color: #2c2c2a; margin-bottom: 6px; }
+  .ss-lk-row   { display: flex; gap: 4px; }
+  .ss-lb {
+    flex: 1; height: 36px; border-radius: 8px;
+    border: 0.5px solid #d3d1c7; background: transparent;
+    font-size: 14px; cursor: pointer; color: #2c2c2a; transition: all 0.1s;
+  }
+  .ss-lb:hover { background: #f1efe8; }
+  .ss-lb.sel   { background: #e6f1fb; border-color: #378add; color: #0c447c; font-weight: 600; }
+  .ss-lk-labs  { display: flex; justify-content: space-between; font-size: 9px; color: #888780; }
+
+  /* LTS Likert row + info popover */
+  .ss-lts-info-btn {
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    color: #185fa5; font-size: 11px; font-weight: 500; padding: 0 2px;
+    text-decoration: underline; vertical-align: middle;
+  }
+  .ss-lts-info-btn:hover { color: #0c447c; }
+  .ss-lts-info-panel {
+    display: none; background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+    font-size: 10.5px; color: #334155; line-height: 1.6;
+  }
+  .ss-lts-info-panel.open { display: block; }
+  .ss-lts-labs { display: flex; justify-content: space-between; font-size: 9px; color: #888780; margin-top: 2px; }
+
+  /* Stress factors (conditional) */
+  .ss-factors { display: none; flex-direction: column; gap: 4px; }
+  .ss-factors.visible { display: flex; }
+  .ss-check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .ss-check-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 7px;
+    cursor: pointer; font: 500 10px/1.3 'Inter', sans-serif; color: #334155;
+    transition: all 0.12s; user-select: none;
+  }
+  .ss-check-item:hover { border-color: #93c5fd; background: #f8fafc; }
+  .ss-check-item input { accent-color: #1d4ed8; width: 13px; height: 13px; flex-shrink: 0; }
+  .ss-check-item.checked { border-color: #378add; background: #e6f1fb; color: #0c447c; }
+
+  /* Summary screen */
+  .ss-summary { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .ss-summary.visible { display: flex; }
+  .ss-summary-body { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .ss-summary-title { font-size: 13px; font-weight: 600; color: #2c2c2a; }
+  .ss-req-star { color: #dc2626; font-weight: 700; }
+  .ss-req-block.error .ss-q-label { color: #dc2626; }
+  .ss-req-block.error .ss-time-btn,
+  .ss-req-block.error .ss-lb,
+  .ss-req-block.error .ss-tvol-btn { border-color: #fca5a5; }
+  .ss-err-msg { display: none; font-size: 11px; color: #dc2626; margin-top: 6px; }
+  .ss-req-block.error .ss-err-msg { display: block; }
+
+  .ss-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .ss-time-btn {
+    padding: 8px 6px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    background: #fff; font: 500 11px/1.3 'Inter', sans-serif; color: #334155;
+    cursor: pointer; transition: all 0.12s; text-align: center;
+  }
+  .ss-time-btn:hover  { border-color: #93c5fd; }
+  .ss-time-btn.sel    { border-color: #378add; background: #e6f1fb; color: #0c447c; }
+
+  .ss-cal-stack { display: flex; flex-direction: column; gap: 5px; }
+  .ss-cal-btn {
+    padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    background: #fff; font: 500 11px/1.4 'Inter', sans-serif; color: #334155;
+    cursor: pointer; transition: all 0.12s; text-align: left;
+  }
+  .ss-cal-btn:hover { border-color: #93c5fd; }
+  .ss-cal-btn.sel   { border-color: #378add; background: #e6f1fb; color: #0c447c; }
+
+  .ss-tvol-row { display: flex; gap: 6px; }
+  .ss-tvol-btn {
+    flex: 1; padding: 8px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    background: #fff; font: 500 11px/1 'Inter', sans-serif; color: #334155;
+    cursor: pointer; transition: all 0.12s; text-align: center;
+  }
+  .ss-tvol-btn:hover { border-color: #93c5fd; }
+  .ss-tvol-btn.sel   { border-color: #378add; background: #e6f1fb; color: #0c447c; }
+
+  .ss-textarea {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 8px 10px; font: 12px/1.5 'Inter', sans-serif; color: #334155;
+    resize: none; outline: none; transition: border 0.12s;
+  }
+  .ss-textarea:focus { border-color: #93c5fd; }
+
+  /* Footer */
+  .ss-footer {
+    padding: 7px 16px 14px; display: flex; gap: 8px;
+    border-top: 0.5px solid #e8e6e0; flex-shrink: 0; align-items: center;
+  }
+  .ss-btn-back {
+    width: 42px; height: 36px; border-radius: 8px;
+    border: 0.5px solid #d3d1c7; background: transparent;
+    cursor: pointer; color: #2c2c2a; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; font-size: 15px;
+  }
+  .ss-btn-back:hover  { background: #f1efe8; }
+  .ss-btn-back:disabled { opacity: 0.3; cursor: default; }
+  .ss-btn-next {
+    flex: 1; height: 36px; border-radius: 8px; border: none;
+    background: #185fa5; color: #fff; font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  .ss-btn-next:hover:not(:disabled) { background: #0c447c; }
+  .ss-btn-next:disabled { background: #b4b2a9; cursor: default; }
+  .ss-btn-next.review { background: #2c2c2a; color: #fff; }
+  .ss-btn-next.review:hover { background: #444; }
+  .ss-btn-next.finish { background: #3b6d11; color: #fff; }
+  .ss-btn-next.finish:hover { background: #27500a; }
+  .ss-btn-finish {
+    height: 36px; padding: 0 12px; border-radius: 8px;
+    border: 0.5px solid #d3d1c7; background: transparent;
+    cursor: pointer; color: #888780; font-size: 11px; flex-shrink: 0;
+  }
+  .ss-btn-finish:hover { background: #f1efe8; color: #2c2c2a; }
+
+  /* Confirm screen */
+  .ss-confirm {
+    display: none; flex-direction: column; align-items: center;
+    padding: 40px 24px; text-align: center; gap: 10px; flex: 1;
+  }
+  .ss-confirm.visible { display: flex; }
+  .ss-confirm h3 { margin: 0; font-size: 15px; color: #1a1a2e; }
+  .ss-confirm p  { margin: 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+  .ss-confirm button {
+    margin-top: 6px; padding: 10px 24px; border: none;
+    border-radius: 8px; background: #1a1a2e; color: #fff;
+    font: 600 13px 'Inter'; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -357,14 +582,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
     Paint Route
   </button>
-  <button class="ctrl-btn toggle-btn" id="refineBtn" type="button" onclick="toggleRefineMode()" title="Drag handles to reshape; release commits. Esc cancels refine. Click again to exit refine and keep edits.">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="3"/><circle cx="15" cy="12" r="3"/><path d="M9 12h6M12 9v6"/></svg>
-    Refine route
+  <button class="ctrl-btn toggle-btn" id="unpaintBtn" type="button" onclick="toggleUnpaintMode()" title="Remove segments from your painted route: tap or draw along blue segments. Click again to exit.">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+    Unpaint
   </button>
-  <button class="ctrl-btn" id="refine-debug-seed-btn" type="button" style="display:none" onclick="refineDebugSeedNearCenter(10)" title="Requires ?refineDebug=1 or localStorage refineDebug=1">Seed test route</button>
-  <button class="ctrl-btn refine-test-btn" type="button" style="display:none;font-size:11px;padding:5px 8px" id="refine-test-extend" onclick="refineTest_scenarioExtendEnd()" title="Programmatic: nudge last handle screen +E (extend)">T extend</button>
-  <button class="ctrl-btn refine-test-btn" type="button" style="display:none;font-size:11px;padding:5px 8px" id="refine-test-right" onclick="refineTest_scenarioRightTurnMid()" title="Programmatic: nudge mid handle SE (corner)">T right</button>
-  <button class="ctrl-btn refine-test-btn" type="button" style="display:none;font-size:11px;padding:5px 8px" id="refine-test-shrink" onclick="refineTest_scenarioShrinkEnd()" title="Programmatic: nudge last handle toward first (retract)">T shrink</button>
 </div>
 
 <!-- ── Settings panel ── -->
@@ -390,16 +611,12 @@
 
 <!-- ── Paint canvas (sits above map, pointer-events toggled by paint mode) ── -->
 <canvas id="paint-canvas"></canvas>
+<canvas id="unpaint-canvas"></canvas>
 
 <!-- ── Paint hint strip ── -->
-<div id="paint-hint">Draw along your route — segments confirm after a short lookahead. <strong>Alt+drag</strong> erases. Undo or tap a blue road to fix.</div>
+<div id="paint-hint"><strong>Swipe</strong> along roads to add segments (lookahead confirm), or <strong>tap</strong> a road to add one. Undo or tap a blue segment to remove one segment.</div>
 
-<div id="refine-hint">Orange dots snap to <strong>road line endpoints</strong>. Drag updates the <strong>blue selection live</strong>; <strong>release</strong> to finish that edit. <strong>Esc</strong> abandons refine and restores the route from when you opened refine.</div>
-
-<div id="refine-toolbar">
-  <button type="button" id="refine-undo-btn" onclick="refineUndoLast()" disabled>Undo last refine</button>
-  <span id="refine-undo-meta" style="font-size:11px;color:#78716c">No refine steps yet</span>
-</div>
+<div id="unpaint-hint"><strong>Swipe</strong> across your blue route to strip segments, or <strong>tap</strong> a selected segment to remove it. Use <strong>Paint Route</strong> to add again.</div>
 
 <!-- ── Selection badge ── -->
 <div id="selection-badge">
@@ -407,132 +624,161 @@
   <button class="badge-btn" id="badge-undo" type="button" disabled onclick="undoLastSegment()" title="Undo last segment (Ctrl+Z)">Undo</button>
   <button class="badge-btn" id="badge-undo-stroke" type="button" disabled onclick="undoLastPaintStroke()" title="Undo the last completed paint stroke (batch)">Undo stroke</button>
   <button class="badge-btn" id="badge-clear" onclick="clearSelection()">Clear</button>
+  <div id="badge-rate-break"></div>
   <button class="badge-btn" id="badge-rate" onclick="openSurveyPanel()">Rate route →</button>
 </div>
 
-<!-- ── Survey panel ── -->
-<div id="survey-panel">
-  <div class="survey-header">
+<!-- ── Survey sheet ── -->
+<div id="survey-sheet">
+  <div class="ss-handle"></div>
+
+  <!-- Header -->
+  <div class="ss-hdr">
     <div>
-      <h2>Level of traffic stress (LTS)</h2>
-      <p id="survey-subtitle">Feedback on <span id="survey-seg-count">0</span> painted segment(s) for the stress model</p>
+      <div class="ss-hdr-title">Rate your route</div>
+      <div class="ss-hdr-sub" id="ss-sub"></div>
     </div>
-    <button class="survey-close" onclick="closeSurveyPanel()">&times;</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="ss-prog-pill" id="ss-prog">1 / 1</span>
+      <button class="ss-close" onclick="closeSurveySheet()">&times;</button>
+    </div>
   </div>
 
-  <div class="survey-body" id="survey-form-body">
-
-    <p class="survey-lts-callout">
-      Your answers calibrate how well map colors match real riding stress. If segments differ a lot, answer for the <strong>overall route</strong> or the <strong>worst stretch</strong> — whichever you are thinking of consistently.
-    </p>
-
-    <p id="survey-lts-model-summary" class="survey-lts-summary" aria-live="polite"></p>
-
-    <div class="survey-q">
-      <div class="survey-section-label">Critical — how this route felt</div>
-      <label class="q-label">Was this route appropriate for:</label>
-      <span class="q-hint">Pick the single best fit. Your choice maps to LTS 1–4 for the stress model.</span>
-      <div class="lts-pick-grid" id="lts-pick-grid">
-        <button type="button" class="lts-pick-btn" data-lts="1" onclick="setPerceivedLts(1)">
-          <span class="lts-pick-persona">Beginners and children</span>
-          <small>LTS 1 — Strong separation from almost all traffic; simple crossings; suitable for children.</small>
-        </button>
-        <button type="button" class="lts-pick-btn" data-lts="2" onclick="setPerceivedLts(2)">
-          <span class="lts-pick-persona">Casual adults</span>
-          <small>LTS 2 — Own space away from higher-speed and multilane traffic except at crossings; comfortable for most adults (including interested-but-concerned riders).</small>
-        </button>
-        <button type="button" class="lts-pick-btn" data-lts="3" onclick="setPerceivedLts(3)">
-          <span class="lts-pick-persona">Confident riders</span>
-          <small>LTS 3 — Moderate-speed or multilane interaction, or close to higher-speed traffic; enthused and confident riders.</small>
-        </button>
-        <button type="button" class="lts-pick-btn" data-lts="4" onclick="setPerceivedLts(4)">
-          <span class="lts-pick-persona">Strong and fearless</span>
-          <small>LTS 4 — High-speed traffic interaction or very close to fast traffic; only very assertive riders.</small>
-        </button>
-      </div>
-    </div>
-
-    <div class="survey-q">
-      <div class="survey-section-label">Critical — map vs your ride</div>
-      <label class="q-label">Compared to the LTS colors on the map for these segments…</label>
-      <div class="map-cal-stack" id="map-cal-stack">
-        <button type="button" class="map-cal-btn" data-cal="too_optimistic" onclick="setMapLtsCalib('too_optimistic')">
-          I felt <strong>more</strong> stressed than the map suggested
-        </button>
-        <button type="button" class="map-cal-btn" data-cal="about_right" onclick="setMapLtsCalib('about_right')">
-          The map matched my stress about <strong>right</strong>
-        </button>
-        <button type="button" class="map-cal-btn" data-cal="too_pessimistic" onclick="setMapLtsCalib('too_pessimistic')">
-          I felt <strong>less</strong> stressed than the map suggested
-        </button>
-      </div>
-    </div>
-
-    <div class="survey-q">
-      <label class="q-label">When did you ride this route?</label>
-      <div class="time-grid" id="time-grid">
-        <button class="time-btn" data-val="Morning" onclick="setTime('Morning')">🌅 Morning<br><small>6am–12pm</small></button>
-        <button class="time-btn" data-val="Afternoon" onclick="setTime('Afternoon')">☀️ Afternoon<br><small>12pm–5pm</small></button>
-        <button class="time-btn" data-val="Evening" onclick="setTime('Evening')">🌆 Evening<br><small>5pm–9pm</small></button>
-        <button class="time-btn" data-val="Night" onclick="setTime('Night')">🌙 Night<br><small>9pm–6am</small></button>
-      </div>
-    </div>
-
-    <div class="survey-q">
-      <label class="q-label">What drove stress on this route?</label>
-      <span class="q-hint">Select all that apply (aligned with LTS inputs)</span>
-      <div class="check-grid" id="factors-grid">
-        <label class="check-item"><input type="checkbox" value="Motor traffic speed"> Motor traffic speed</label>
-        <label class="check-item"><input type="checkbox" value="Motor traffic volume"> Motor traffic volume</label>
-        <label class="check-item"><input type="checkbox" value="Number of motor lanes"> Number of motor lanes</label>
-        <label class="check-item"><input type="checkbox" value="Little separation from traffic"> Little separation from traffic</label>
-        <label class="check-item"><input type="checkbox" value="Intersections or crossings"> Intersections or crossings</label>
-        <label class="check-item"><input type="checkbox" value="Door zone or parking-adjacent"> Door zone or parking-adjacent</label>
-        <label class="check-item"><input type="checkbox" value="Bike lane or path blocked"> Bike lane or path blocked</label>
-        <label class="check-item"><input type="checkbox" value="Map bike facility did not match ground"> Map bike facility did not match ground</label>
-      </div>
-    </div>
-
-    <div class="survey-q optional-block">
-      <label class="q-label">Optional: overall comfort (1–5)</label>
-      <span class="q-hint">Not required — adds a simple numeric alongside LTS</span>
-      <div class="rating-row" id="rating-row">
-        <button type="button" class="rating-btn" data-val="1" onclick="setRating(1)">1</button>
-        <button type="button" class="rating-btn" data-val="2" onclick="setRating(2)">2</button>
-        <button type="button" class="rating-btn" data-val="3" onclick="setRating(3)">3</button>
-        <button type="button" class="rating-btn" data-val="4" onclick="setRating(4)">4</button>
-        <button type="button" class="rating-btn" data-val="5" onclick="setRating(5)">5</button>
-      </div>
-      <div class="rating-labels"><span>Very uncomfortable</span><span>Very comfortable</span></div>
-    </div>
-
-    <div class="survey-q">
-      <label class="q-label">Perceived motor traffic on this ride <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
-      <span class="q-hint">Rough sense of density — helps interpret time of day</span>
-      <div class="traffic-vol-grid" id="traffic-vol-grid">
-        <button type="button" class="traffic-vol-btn" data-val="low" onclick="setTrafficVol('low')">Low</button>
-        <button type="button" class="traffic-vol-btn" data-val="medium" onclick="setTrafficVol('medium')">Medium</button>
-        <button type="button" class="traffic-vol-btn" data-val="high" onclick="setTrafficVol('high')">High</button>
-      </div>
-    </div>
-
-    <!-- Comments -->
-    <div class="survey-q">
-      <label class="q-label">Any other comments? <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
-      <textarea class="survey-textarea" id="survey-comments" rows="3" maxlength="500"
-        placeholder="Describe your experience…"></textarea>
-    </div>
-
-    <button id="survey-submit" onclick="submitFeedback()" disabled>Submit feedback</button>
+  <!-- Segment track -->
+  <div class="ss-track-outer" id="ss-track-outer">
+    <div class="ss-fade-l"></div>
+    <div class="ss-track-scroll" id="ss-track"></div>
+    <div class="ss-fade-r"></div>
   </div>
 
-  <!-- Confirmation screen (shown after submit) -->
-  <div id="survey-confirm">
-    <div class="confirm-icon">🙏</div>
+  <!-- Per-segment questions (hidden when showing summary or confirm) -->
+  <div class="ss-q-area" id="ss-q-area">
+    <div class="ss-q-slide" id="ss-q-slide">
+      <div class="ss-q-road" id="ss-q-road"></div>
+      <div class="ss-divider"></div>
+
+      <!-- LTS pick -->
+      <div>
+        <div class="ss-q-label">
+          Was this segment appropriate for:
+          <button class="ss-lts-info-btn" onclick="toggleLtsInfo()">more info…</button>
+        </div>
+        <div class="ss-lts-info-panel" id="ss-lts-info-panel">
+          <div><strong>1 – Beginners &amp; children:</strong> Calm, strong separation from traffic</div>
+          <div><strong>2 – Casual adults:</strong> Own space away from fast or multilane roads</div>
+          <div><strong>3 – Confident riders:</strong> Moderate-speed or multilane interaction</div>
+          <div><strong>4 – Strong &amp; fearless:</strong> High-speed traffic, assertive riders only</div>
+        </div>
+        <div class="ss-lk-row" id="ss-lts-row">
+          <button class="ss-lb" data-lts="1" onclick="setSegLts(1)">1</button>
+          <button class="ss-lb" data-lts="2" onclick="setSegLts(2)">2</button>
+          <button class="ss-lb" data-lts="3" onclick="setSegLts(3)">3</button>
+          <button class="ss-lb" data-lts="4" onclick="setSegLts(4)">4</button>
+        </div>
+        <div class="ss-lts-labs"><span>Most inclusive</span><span>Expert only</span></div>
+      </div>
+
+      <!-- Safety 1–10 -->
+      <div class="ss-divider"></div>
+      <div>
+        <div class="ss-q-label">How safe did you feel? (1–10)</div>
+        <div class="ss-lk-row" id="ss-safety-row">
+          <button class="ss-lb" data-v="1"  onclick="setSegSafety(1)">1</button>
+          <button class="ss-lb" data-v="2"  onclick="setSegSafety(2)">2</button>
+          <button class="ss-lb" data-v="3"  onclick="setSegSafety(3)">3</button>
+          <button class="ss-lb" data-v="4"  onclick="setSegSafety(4)">4</button>
+          <button class="ss-lb" data-v="5"  onclick="setSegSafety(5)">5</button>
+          <button class="ss-lb" data-v="6"  onclick="setSegSafety(6)">6</button>
+          <button class="ss-lb" data-v="7"  onclick="setSegSafety(7)">7</button>
+          <button class="ss-lb" data-v="8"  onclick="setSegSafety(8)">8</button>
+          <button class="ss-lb" data-v="9"  onclick="setSegSafety(9)">9</button>
+          <button class="ss-lb" data-v="10" onclick="setSegSafety(10)">10</button>
+        </div>
+        <div class="ss-lk-labs"><span>Very unsafe</span><span>Very safe</span></div>
+      </div>
+
+      <!-- Stress factors (shown only when LTS >= 3) -->
+      <div class="ss-factors" id="ss-factors">
+        <div class="ss-divider"></div>
+        <div class="ss-q-label">What drove stress here? (select all that apply)</div>
+        <div class="ss-check-grid" id="ss-factors-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route summary screen -->
+  <div class="ss-summary" id="ss-summary">
+    <div class="ss-summary-body">
+      <div class="ss-summary-title">Route summary</div>
+
+      <div class="ss-req-block" id="ss-req-time">
+        <div class="ss-q-label">When did you ride this route? <span class="ss-req-star">*</span></div>
+        <div class="ss-err-msg">Please select a time of day.</div>
+        <div class="ss-time-grid">
+          <button class="ss-time-btn" data-v="Morning"   onclick="setSumTime('Morning')">Morning<br><small style="font-weight:400;color:#888780">6am–12pm</small></button>
+          <button class="ss-time-btn" data-v="Afternoon" onclick="setSumTime('Afternoon')">Afternoon<br><small style="font-weight:400;color:#888780">12pm–5pm</small></button>
+          <button class="ss-time-btn" data-v="Evening"   onclick="setSumTime('Evening')">Evening<br><small style="font-weight:400;color:#888780">5pm–9pm</small></button>
+          <button class="ss-time-btn" data-v="Night"     onclick="setSumTime('Night')">Night<br><small style="font-weight:400;color:#888780">9pm–6am</small></button>
+        </div>
+      </div>
+
+      <div class="ss-req-block" id="ss-req-sat">
+        <div class="ss-q-label">How satisfied were you with this route overall? <span class="ss-req-star">*</span></div>
+        <div class="ss-err-msg">Please rate your overall satisfaction.</div>
+        <div class="ss-lk-row" id="ss-sat-row">
+          <button class="ss-lb" data-v="1" onclick="setSumSat(1)">1</button>
+          <button class="ss-lb" data-v="2" onclick="setSumSat(2)">2</button>
+          <button class="ss-lb" data-v="3" onclick="setSumSat(3)">3</button>
+          <button class="ss-lb" data-v="4" onclick="setSumSat(4)">4</button>
+          <button class="ss-lb" data-v="5" onclick="setSumSat(5)">5</button>
+        </div>
+        <div class="ss-lk-labs"><span>Very dissatisfied</span><span>Very satisfied</span></div>
+      </div>
+
+      <div class="ss-req-block" id="ss-req-again">
+        <div class="ss-q-label">Would you ride this route again? <span class="ss-req-star">*</span></div>
+        <div class="ss-err-msg">Please select an option.</div>
+        <div class="ss-tvol-row">
+          <button class="ss-tvol-btn" data-v="yes"      onclick="setSumAgain('yes')">Yes</button>
+          <button class="ss-tvol-btn" data-v="probably" onclick="setSumAgain('probably')">Probably</button>
+          <button class="ss-tvol-btn" data-v="no"       onclick="setSumAgain('no')">No</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="ss-q-label">What was the purpose of this trip? <span style="font-size:11px;font-weight:400;color:#888780">(optional)</span></div>
+        <div class="ss-time-grid" id="ss-purpose-grid">
+          <button class="ss-time-btn" data-v="Commute"    onclick="setSumPurpose('Commute')">Commute</button>
+          <button class="ss-time-btn" data-v="Recreation" onclick="setSumPurpose('Recreation')">Recreation</button>
+          <button class="ss-time-btn" data-v="Exercise"   onclick="setSumPurpose('Exercise')">Exercise</button>
+          <button class="ss-time-btn" data-v="Errands"    onclick="setSumPurpose('Errands')">Errands</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="ss-q-label">Any other comments? <span style="font-size:11px;font-weight:400;color:#888780">(optional)</span></div>
+        <textarea class="ss-textarea" id="ss-comments" rows="3" maxlength="500" placeholder="Describe your experience…"></textarea>
+      </div>
+    </div>
+    <div class="ss-footer">
+      <button class="ss-btn-back" onclick="summaryBack()">&#8592;</button>
+      <button class="ss-btn-next finish" id="ss-submit-btn" onclick="submitSurvey()">Submit</button>
+    </div>
+  </div>
+
+  <!-- Confirm screen -->
+  <div class="ss-confirm" id="ss-confirm">
+    <div style="font-size:36px">&#x2714;&#xfe0f;</div>
     <h3>Thanks for your feedback!</h3>
-    <p>Your response has been recorded for <strong id="confirm-count">0</strong> road segments.</p>
-    <p style="margin-top:4px;font-size:11px;color:#94a3b8">Open browser console to see the submitted payload.</p>
-    <button onclick="resetAfterSubmit()">Done</button>
+    <p>Your response has been recorded.</p>
+    <button onclick="resetAfterSurveySubmit()">Done</button>
+  </div>
+
+  <!-- Per-segment footer -->
+  <div class="ss-footer" id="ss-footer">
+    <button class="ss-btn-back" id="ss-back-btn" onclick="segBack()">&#8592;</button>
+    <button class="ss-btn-next" id="ss-next-btn" onclick="segNext()">Next segment</button>
+    <button class="ss-btn-finish" id="ss-finish-btn" onclick="goToSummary()">Skip &#8594;</button>
   </div>
 </div>
 
@@ -612,55 +858,13 @@ function RefreshZone(i_ridescore, i_speedlimit, i_numlanes, i_facility, i_functi
 }
 
 /* ════════════════════════════════════════════════════════
-   REFINE / STROKE STATE (declared before map — used in style.load)
+   STROKE / SELECTION ORDER (builds route path for paint)
 ════════════════════════════════════════════════════════ */
-let refineMode = false;
-/** @type {{ handles: { lng: number, lat: number }[] }[]} One entry per continuous chain (disjoint paint → multiple paths). */
-let refinePaths = [];
-/**
- * @type {{ pathIdx: number, handleIdx: number, frozenHandles: { lng: number, lat: number }[] } | null}
- * Only `handleIdx` is edited during the gesture; others stay at `frozenHandles` until pointer-up commit.
- */
-let refineDrag = null;
-/** @type {Map|null} snapshot of selectedSegments when refine started (Esc restores this) */
-let refineSnapshot = null;
-/** Snapshot before the current handle drag — pushed to undo on release if the route changed. */
-let refinePreDragSnapshot = null;
-let refineGestureMoved = false;
-/** @type {Array<{ segments: Map, stroke: number[] }>} */
-let refineUndoStack = [];
-const REFINE_UNDO_MAX = 24;
-let refinePointerUpBound = null;
-let lastPointerAlt = false;
+let unpaintMode = false;
 /** Commit order along route (deduped adjacent). */
 let strokeOrderedSegmentIds = [];
 const strokeBatchesHistory = [];
 const AVOID_REVISIT_MULT = 1.14;
-/** Break refine into separate polylines when the stitched chain jumps farther than this (m). */
-const REFINE_GAP_BREAK_M = 200;
-/** Vertex is a drag handle if the bend here exceeds this (degrees). */
-const REFINE_MIN_TURN_DEG = 20;
-/** Along a nearly straight run between corners, add a handle every this many meters. */
-const REFINE_STRAIGHT_SUBDIV_M = 168;
-/** Corners closer than this along the stitched chain (m) collapse to one handle (same junction cluster). */
-const REFINE_CORNER_MERGE_RUN_M = 38;
-/** Stitch / duplicate vertices closer than this (m) are merged before corner detection (reduces dot piles). */
-const REFINE_CHAIN_VERTEX_MERGE_M = 0.55;
-/** After snapping handles to MVT edges, merge consecutive handles closer than this (m) for display. */
-const REFINE_HANDLE_POST_SNAP_DEDUPE_M = 2.2;
-/**
- * Chord resampling picks the nearest MVT edge per sample. At crossings, isotropic snap flips
- * between arms sample-to-sample → every intersection branch joins the selection. Hysteresis
- * keeps the **previous segment** unless another candidate is clearly closer (px slack).
- */
-const REFINE_COLLECT_HYSTERESIS_PX = 22;
-/** Preview leg: prefer chain points near prior handle arclength vs globally closest (parallel / folded chains). */
-const REFINE_PREVIEW_LEG_ARCLEN_PAD_M = 110;
-const REFINE_PREVIEW_LEG_ARCLEN_PER_CHORD = 5.2;
-const REFINE_PREVIEW_BRANCH_HYST_PX = 14;
-const REFINE_CHORD_SAMPLE_STEP_M = 10;
-const REFINE_CHORD_MAX_STEPS = 48;
-const REFINE_CHORD_MIN_STEPS = 14;
 
 /* ════════════════════════════════════════════════════════
    MAP INIT
@@ -722,46 +926,32 @@ map.on('style.load', () => {
     }
   });
 
-  map.addSource('route-refine-preview', {
-    type: 'geojson',
-    data: { type: 'FeatureCollection', features: [] }
+  /* ── Survey active segment — black border then cyan fill ── */
+  map.addLayer({
+    id: 'road-survey-border',
+    type: 'line',
+    source: 'segments',
+    'source-layer': 'update_score_v2',
+    paint: {
+      'line-color': '#000',
+      'line-width': 10,
+      'line-opacity': ['case', ['boolean', ['feature-state', 'surveyActive'], false], 1, 0]
+    }
   });
   map.addLayer({
-    id: 'route-refine-preview-line',
+    id: 'road-survey-active',
     type: 'line',
-    source: 'route-refine-preview',
-    layout: {
-      visibility: 'none',
-      'line-cap': 'round',
-      'line-join': 'round'
-    },
+    source: 'segments',
+    'source-layer': 'update_score_v2',
     paint: {
-      'line-color': '#fb923c',
-      'line-width': 4,
-      'line-opacity': 0.92,
-      'line-dasharray': [3, 2]
+      'line-color': '#00e5ff',
+      'line-width': 6,
+      'line-opacity': ['case', ['boolean', ['feature-state', 'surveyActive'], false], 1, 0]
     }
   });
 
-  map.addSource('route-refine-handles', {
-    type: 'geojson',
-    data: { type: 'FeatureCollection', features: [] }
-  });
-  map.addLayer({
-    id: 'route-refine-handles',
-    type: 'circle',
-    source: 'route-refine-handles',
-    paint: {
-      'circle-radius': 11,
-      'circle-color': '#ea580c',
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#fff'
-    },
-    layout: { visibility: 'none' }
-  });
-
   map.on('click', 'road-selected', (e) => {
-    if (paintMode || refineMode) return;
+    if (paintMode || unpaintMode) return;
     const f = e.features[0];
     const featureId = f.id !== undefined ? f.id : f.properties.ogc_fid;
     if (featureId === undefined || featureId === null) return;
@@ -796,7 +986,7 @@ map.on('style.load', () => {
 
   /* ── Popup: road segment ── */
   map.on('click', 'road-score', (e) => {
-    if (paintMode || refineMode) return;
+    if (paintMode || unpaintMode) return;
     const p = e.features[0].properties;
     new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`
       <div style="font-family:'Inter',sans-serif">
@@ -831,1546 +1021,25 @@ map.on('style.load', () => {
   });
 
   map.on('mouseenter', 'road-score', () => {
-    if (paintMode || refineMode) return;
+    if (paintMode || unpaintMode) return;
     map.getCanvas().style.cursor = 'pointer';
   });
   map.on('mouseleave', 'road-score', () => {
-    if (paintMode || refineMode) return;
+    if (paintMode || unpaintMode) return;
     map.getCanvas().style.cursor = '';
   });
   map.on('mouseenter', 'road-selected', () => {
-    if (paintMode || refineMode) return;
+    if (paintMode || unpaintMode) return;
     map.getCanvas().style.cursor = 'pointer';
   });
   map.on('mouseleave', 'road-selected', () => {
-    if (paintMode || refineMode) return;
+    if (paintMode || unpaintMode) return;
     map.getCanvas().style.cursor = '';
   });
   map.on('mouseenter', 'crashes_dc', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'crashes_dc', () => { map.getCanvas().style.cursor = ''; });
 
-  setupRefineInteraction();
-  refineDebugInitUi();
-
-  try {
-    const sp = new URLSearchParams(location.search);
-    if (sp.get('refineSelfTest') === '1' && refineDebugEnabled()) {
-      map.once('idle', () => {
-        window.setTimeout(() => {
-          refineDebugSeedFractured(10);
-          toggleRefineMode();
-          const cmp = refineTest_collectSeenCompare();
-          refineDebugAgentLog(
-            'refineSelfTest',
-            'collect seen compare after fractured seed',
-            cmp,
-            'H-seen'
-          );
-        }, 2500);
-      });
-    }
-    if (sp.get('refineAgentMcpSuite') === '1' && refineDebugEnabled()) {
-      map.once('idle', () => {
-        window.setTimeout(() => refineAgentRunMcpSuite(), 2800);
-      });
-    }
-    if (sp.get('refineAgentFractured') === '1' && refineDebugEnabled()) {
-      map.once('idle', () => {
-        window.setTimeout(() => refineAgentRunFracturedNudgeSuite(), 2800);
-      });
-    }
-  } catch (e) { /* ignore */ }
 });
-
-function setupRefineInteraction() {
-  map.on('mousedown', refineMapMouseDown);
-  map.on('mousemove', refineMapMouseMove);
-  map.on('mouseup', refineMapMouseUp);
-}
-
-const refineHintEl = () => document.getElementById('refine-hint');
-const refineToolbarEl = () => document.getElementById('refine-toolbar');
-
-function setRefineLayersVisible(vis) {
-  const v = vis ? 'visible' : 'none';
-  if (map.getLayer('route-refine-handles')) map.setLayoutProperty('route-refine-handles', 'visibility', v);
-  if (map.getLayer('route-refine-preview-line')) map.setLayoutProperty('route-refine-preview-line', 'visibility', v);
-}
-
-function dedupeSelectionHistoryOrder() {
-  const out = [];
-  selectionHistory.forEach(id => {
-    if (out[out.length - 1] !== id) out.push(id);
-  });
-  return out;
-}
-
-function refineDebugEnabled() {
-  try {
-    if (typeof window !== 'undefined' && window.__REFINE_AGENT_LOG__) return true;
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('refineDebug') === '1') return true;
-    return new URLSearchParams(location.search).get('refineDebug') === '1';
-  } catch (e) {
-    return false;
-  }
-}
-
-// #region agent log
-function refineDebugAgentLog(location, message, data, hypothesisId) {
-  if (!refineDebugEnabled()) return;
-  const payload = {
-    sessionId: '367b7f',
-    location,
-    message,
-    data: data || {},
-    timestamp: Date.now(),
-    hypothesisId: hypothesisId || 'none'
-  };
-  fetch('http://127.0.0.1:7623/ingest/72c2ba50-6a40-429e-ba84-eb74ce7c1bce', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '367b7f' },
-    body: JSON.stringify(payload)
-  }).catch(() => {});
-}
-// #endregion
-
-/** Collect up to this many distinct segment ids from bbox before greedy walk (debug seed). */
-const REFINE_DEBUG_SEED_RAW_CAP_MULT = 6;
-const REFINE_DEBUG_SEED_RAW_CAP_MIN = 48;
-
-/** First LineString endpoints for `querySegmentFeatureById` (same as stitch uses). */
-function refineDebugSegmentEndpoints(fid) {
-  const feat = querySegmentFeatureById(fid);
-  if (!feat || !feat.geometry) return null;
-  const lines = feat.geometry.type === 'LineString'
-    ? [feat.geometry.coordinates]
-    : feat.geometry.coordinates;
-  if (!lines || !lines[0] || lines[0].length < 2) return null;
-  const c = lines[0];
-  return { a0: c[0], a1: c[c.length - 1] };
-}
-
-/**
- * Reorder ids into a walk along the road graph: each next segment is the closest unused
- * endpoint-to-endpoint hop within `REFINE_GAP_BREAK_M` of the stitched chain tail.
- * Falls back to raw render order if fewer than two steps can be chained.
- */
-function refineDebugOrderIdsAsContiguousWalk(rawIds, maxLen) {
-  if (!rawIds || rawIds.length < 2) return rawIds;
-  const maxOut = Math.min(maxLen, rawIds.length);
-  const c = map.getCenter();
-  let startIdx = 0;
-  let bestStart = Infinity;
-  for (let i = 0; i < rawIds.length; i++) {
-    const ep = refineDebugSegmentEndpoints(rawIds[i]);
-    if (!ep) continue;
-    const d = Math.min(
-      haversineMeters(c.lng, c.lat, ep.a0[0], ep.a0[1]),
-      haversineMeters(c.lng, c.lat, ep.a1[0], ep.a1[1])
-    );
-    if (d < bestStart) {
-      bestStart = d;
-      startIdx = i;
-    }
-  }
-  const pool = rawIds.filter((_, j) => j !== startIdx);
-  const out = [rawIds[startIdx]];
-  while (out.length < maxOut && pool.length) {
-    const chains = buildMultiChainsFromOrderedIds(out);
-    const tc = chains[chains.length - 1];
-    if (!tc || !tc.length) break;
-    const end = tc[tc.length - 1];
-    let bestJ = -1;
-    let bestD = Infinity;
-    for (let j = 0; j < pool.length; j++) {
-      const ep = refineDebugSegmentEndpoints(pool[j]);
-      if (!ep) continue;
-      const d0 = haversineMeters(end[0], end[1], ep.a0[0], ep.a0[1]);
-      const d1 = haversineMeters(end[0], end[1], ep.a1[0], ep.a1[1]);
-      const d = Math.min(d0, d1);
-      if (d < bestD) {
-        bestD = d;
-        bestJ = j;
-      }
-    }
-    if (bestJ < 0 || bestD > REFINE_GAP_BREAK_M) break;
-    out.push(pool.splice(bestJ, 1)[0]);
-  }
-  if (out.length >= 2) return out;
-  return rawIds.slice(0, maxOut);
-}
-
-/** Raw bbox pool for debug seeds (render order, up to rawCap ids). */
-function refineDebugCollectRawSeedPool(maxN) {
-  maxN = maxN || 8;
-  if (!map) return { rawIds: [], propsById: new Map() };
-  const pt = map.project(map.getCenter());
-  const bbox = [[pt.x - 200, pt.y - 200], [pt.x + 200, pt.y + 200]];
-  let features = [];
-  try {
-    features = map.queryRenderedFeatures(bbox, { layers: ['road-score'] });
-  } catch (err) {
-    return { rawIds: [], propsById: new Map() };
-  }
-  const rawCap = Math.max(maxN * REFINE_DEBUG_SEED_RAW_CAP_MULT, REFINE_DEBUG_SEED_RAW_CAP_MIN);
-  const propsById = new Map();
-  const rawIds = [];
-  const seen = new Set();
-  for (let fi = 0; fi < features.length && rawIds.length < rawCap; fi++) {
-    const f = features[fi];
-    const fid = f.id !== undefined ? f.id : f.properties && f.properties.ogc_fid;
-    if (fid == null || !f.properties || seen.has(String(fid))) continue;
-    seen.add(String(fid));
-    rawIds.push(fid);
-    propsById.set(fid, f.properties);
-  }
-  return { rawIds, propsById };
-}
-
-/** Fake a multi-segment selection from visible roads near map center (no paint). Returns count. */
-function refineDebugSeedNearCenter(maxN) {
-  maxN = maxN || 8;
-  const { rawIds, propsById } = refineDebugCollectRawSeedPool(maxN);
-  const ordered = refineDebugOrderIdsAsContiguousWalk(rawIds, maxN);
-  if (ordered.length < 2) return ordered.length;
-  replaceEntireSelection(ordered, propsById);
-  refineDebugDumpNetwork('after seed');
-  return ordered.length;
-}
-
-/**
- * Same bbox pool as normal seed but **no contiguous walk** — reproduces many disjoint refine paths
- * for testing collect / handle drift (debug only).
- */
-function refineDebugSeedFractured(maxN) {
-  maxN = maxN || 10;
-  const { rawIds, propsById } = refineDebugCollectRawSeedPool(maxN);
-  const ordered = rawIds.slice(0, maxN);
-  if (ordered.length < 2) return ordered.length;
-  replaceEntireSelection(ordered, propsById);
-  refineDebugDumpNetwork('after seed fractured');
-  return ordered.length;
-}
-
-function refineDebugDumpNetwork(label) {
-  const order = strokeOrderedSegmentIds.length ? strokeOrderedSegmentIds.slice() : dedupeSelectionHistoryOrder();
-  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
-  const chainLens = chains.map(c => (c && c.length) || 0);
-  const handleLens = refinePaths.map(p => (p && p.handles && p.handles.length) || 0);
-  const data = {
-    label: label || 'dump',
-    refineMode,
-    orderLen: order.length,
-    chainCount: chains.length,
-    chainVtxLens: chainLens,
-    refinePathCount: refinePaths.length,
-    refinePathHandleLens: handleLens,
-    orderHead: order.slice(0, 20),
-    orderTail: order.slice(-8)
-  };
-  return data;
-}
-
-function refineDebugInitUi() {
-  const btn = document.getElementById('refine-debug-seed-btn');
-  if (btn && refineDebugEnabled()) btn.style.display = '';
-  if (refineDebugEnabled()) {
-    document.querySelectorAll('.refine-test-btn').forEach(b => {
-      b.style.display = '';
-    });
-  }
-  window.refineDebugSeedNearCenter = refineDebugSeedNearCenter;
-  window.refineDebugSeedFractured = refineDebugSeedFractured;
-  window.refineDebugDumpNetwork = refineDebugDumpNetwork;
-  window.refineDebugEnabled = refineDebugEnabled;
-  window.refineTest_networkSnapshot = refineTest_networkSnapshot;
-  window.refineTest_applyHandleCommit = refineTest_applyHandleCommit;
-  window.refineTest_nudgeHandleScreen = refineTest_nudgeHandleScreen;
-  window.refineTest_scenarioExtendEnd = refineTest_scenarioExtendEnd;
-  window.refineTest_scenarioRightTurnMid = refineTest_scenarioRightTurnMid;
-  window.refineTest_scenarioShrinkEnd = refineTest_scenarioShrinkEnd;
-  window.refineTest_collectSeenCompare = refineTest_collectSeenCompare;
-  window.refineTest_dotSanityAudit = refineTest_dotSanityAudit;
-  window.refineAgentRunMcpSuite = refineAgentRunMcpSuite;
-  window.refineAgentRunFracturedNudgeSuite = refineAgentRunFracturedNudgeSuite;
-}
-
-function haversineMeters(lon1, lat1, lon2, lat2) {
-  const R = 6371000;
-  const toR = Math.PI / 180;
-  const dLat = (lat2 - lat1) * toR;
-  const dLon = (lon2 - lon1) * toR;
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
-}
-
-function bearingDeg(ax, ay, bx, by) {
-  const dLon = (bx - ax) * Math.PI / 180;
-  const lat1 = ay * Math.PI / 180;
-  const lat2 = by * Math.PI / 180;
-  const y = Math.sin(dLon) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-}
-
-function angleDeltaDeg(b0, b1) {
-  let d = Math.abs(b1 - b0) % 360;
-  if (d > 180) d = 360 - d;
-  return d;
-}
-
-/**
- * When stitching ordered segments, start a new polyline if the jump to the next
- * segment is larger than REFINE_GAP_BREAK_M (disjoint selection / paint islands).
- */
-function appendSegmentCoordsToChains(chains, feat) {
-  if (!feat || !feat.geometry) return;
-  const lines = feat.geometry.type === 'LineString'
-    ? [feat.geometry.coordinates]
-    : feat.geometry.coordinates;
-  const JOINT_M = 2;
-  for (let li = 0; li < lines.length; li++) {
-    const coords = lines[li];
-    if (coords.length < 2) continue;
-    const a0 = coords[0], a1 = coords[coords.length - 1];
-    if (chains.length === 0) chains.push([]);
-    let chain = chains[chains.length - 1];
-    if (chain.length === 0) {
-      coords.forEach(c => chain.push([c[0], c[1]]));
-      continue;
-    }
-    const last = chain[chain.length - 1];
-    const d0 = haversineMeters(last[0], last[1], a0[0], a0[1]);
-    const d1 = haversineMeters(last[0], last[1], a1[0], a1[1]);
-    const rev = d1 < d0;
-    const walk = rev ? [...coords].reverse() : coords;
-    let start = 0;
-    if (haversineMeters(last[0], last[1], walk[0][0], walk[0][1]) < JOINT_M) start = 1;
-    const gapToStart = start === 0
-      ? haversineMeters(last[0], last[1], walk[0][0], walk[0][1])
-      : 0;
-    if (gapToStart > REFINE_GAP_BREAK_M) {
-      chains.push([]);
-      chain = chains[chains.length - 1];
-      for (let i = 0; i < walk.length; i++) chain.push([walk[i][0], walk[i][1]]);
-    } else {
-      for (let i = start; i < walk.length; i++) chain.push([walk[i][0], walk[i][1]]);
-    }
-  }
-}
-
-function buildMultiChainsFromOrderedIds(order) {
-  const chains = [];
-  for (let i = 0; i < order.length; i++) {
-    const feat = querySegmentFeatureById(order[i]);
-    if (!feat) continue;
-    appendSegmentCoordsToChains(chains, feat);
-  }
-  return chains.filter(c => c.length >= 2);
-}
-
-/** Drop nearly-coincident consecutive vertices from stitched chain (segment join noise). */
-function pruneNearDuplicateChainPoints(chain, epsM) {
-  epsM = epsM == null ? REFINE_CHAIN_VERTEX_MERGE_M : epsM;
-  if (!chain || chain.length < 2) return chain;
-  const out = [[chain[0][0], chain[0][1]]];
-  for (let i = 1; i < chain.length; i++) {
-    const x = chain[i][0], y = chain[i][1];
-    const last = out[out.length - 1];
-    if (haversineMeters(last[0], last[1], x, y) < epsM) continue;
-    out.push([x, y]);
-  }
-  return out.length >= 2 ? out : chain;
-}
-
-/** Interior points along chain indices [i0 .. i1] at ~spacingM (endpoints excluded). */
-function midsAlongChainSpan(chain, i0, i1, spacingM) {
-  const EPS = 12;
-  const out = [];
-  if (i1 <= i0) return out;
-  let distAlong = 0;
-  let nextMark = spacingM;
-  for (let i = i0; i < i1; i++) {
-    const ax = chain[i][0], ay = chain[i][1];
-    const bx = chain[i + 1][0], by = chain[i + 1][1];
-    const L = haversineMeters(ax, ay, bx, by);
-    while (nextMark < distAlong + L - EPS) {
-      const into = nextMark - distAlong;
-      const t = into / L;
-      out.push({ lng: ax + t * (bx - ax), lat: ay + t * (by - ay) });
-      nextMark += spacingM;
-    }
-    distAlong += L;
-  }
-  return out;
-}
-
-/** Handles at endpoints, sharp bends (intersection-like), and along long straights. */
-function placeHandlesForChain(chain) {
-  chain = pruneNearDuplicateChainPoints(chain, REFINE_CHAIN_VERTEX_MERGE_M);
-  const n = chain.length;
-  if (n < 2) return [];
-  if (n === 2) {
-    return [
-      { lng: chain[0][0], lat: chain[0][1] },
-      { lng: chain[1][0], lat: chain[1][1] }
-    ];
-  }
-  const keyIdxRaw = [];
-  for (let i = 0; i < n; i++) {
-    if (i === 0 || i === n - 1) keyIdxRaw.push(i);
-    else {
-      const br0 = bearingDeg(chain[i - 1][0], chain[i - 1][1], chain[i][0], chain[i][1]);
-      const br1 = bearingDeg(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
-      if (angleDeltaDeg(br0, br1) >= REFINE_MIN_TURN_DEG) keyIdxRaw.push(i);
-    }
-  }
-  const keyIdx = mergeCloseCornersAlongChain(chain, keyIdxRaw, REFINE_CORNER_MERGE_RUN_M);
-  const handles = [];
-  for (let k = 0; k < keyIdx.length; k++) {
-    const ik = keyIdx[k];
-    handles.push({ lng: chain[ik][0], lat: chain[ik][1] });
-    if (k < keyIdx.length - 1) {
-      const i0 = keyIdx[k];
-      const i1 = keyIdx[k + 1];
-      midsAlongChainSpan(chain, i0, i1, REFINE_STRAIGHT_SUBDIV_M).forEach(m => handles.push(m));
-    }
-  }
-  return handles;
-}
-
-function mergeCloseCornersAlongChain(chain, keyIdx, minRunM) {
-  if (keyIdx.length <= 2) return keyIdx;
-  const end = keyIdx[keyIdx.length - 1];
-  const merged = [keyIdx[0]];
-  for (let a = 1; a < keyIdx.length - 1; a++) {
-    const cur = keyIdx[a];
-    const lastM = merged[merged.length - 1];
-    let run = 0;
-    for (let i = lastM; i < cur; i++) {
-      run += haversineMeters(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
-    }
-    if (run < minRunM) continue;
-    merged.push(cur);
-  }
-  if (merged[merged.length - 1] !== end) merged.push(end);
-  return merged;
-}
-
-function selectedSegmentIdSet() {
-  const s = new Set();
-  selectedSegments.forEach((_, id) => { s.add(String(id)); });
-  return s;
-}
-
-function buildRefinePathsFromChains(chains) {
-  return chains
-    .map(chain => {
-      const path = {
-        handles: placeHandlesForChain(chain).map(h =>
-          snapRefineHandleClosestOnBestEdge(h.lng, h.lat, { onlySelectedSegments: true })
-        )
-      };
-      dedupeNearIdenticalRefineHandles(path, REFINE_HANDLE_POST_SNAP_DEDUPE_M);
-      return path;
-    })
-    .filter(p => p.handles.length >= 2);
-}
-
-function syncRefineHandleSource() {
-  const src = map.getSource('route-refine-handles');
-  if (!src) return;
-  const feats = [];
-  for (let pi = 0; pi < refinePaths.length; pi++) {
-    const handles = refinePaths[pi].handles;
-    for (let hi = 0; hi < handles.length; hi++) {
-      const h = handles[hi];
-      feats.push({
-        type: 'Feature',
-        properties: { pathIdx: pi, handleIdx: hi },
-        geometry: { type: 'Point', coordinates: [h.lng, h.lat] }
-      });
-    }
-  }
-  src.setData({ type: 'FeatureCollection', features: feats });
-}
-
-function syncRefinePreviewLine() {
-  const src = map.getSource('route-refine-preview');
-  if (!src) return;
-  const order = strokeOrderedSegmentIds.length
-    ? strokeOrderedSegmentIds.slice()
-    : dedupeSelectionHistoryOrder();
-  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
-  const lineFeatures = [];
-  for (let pi = 0; pi < refinePaths.length; pi++) {
-    const handles = refinePaths[pi].handles;
-    if (handles.length < 2) continue;
-    let coords;
-    if (pi < chains.length && chains[pi] && chains[pi].length >= 2) {
-      coords = buildRoadFollowingPreviewCoordsForChain(chains[pi], handles);
-    } else {
-      coords = [];
-      for (let i = 0; i < handles.length; i++) {
-        const p = handles[i];
-        if (
-          coords.length > 0 &&
-          haversineMeters(coords[coords.length - 1][0], coords[coords.length - 1][1], p.lng, p.lat) < 0.25
-        ) {
-          continue;
-        }
-        coords.push([p.lng, p.lat]);
-      }
-    }
-    if (coords.length < 2) continue;
-    const coordsClean = dedupeConsecutiveLngLatCoords(coords, 0.12);
-    if (coordsClean.length < 2) continue;
-    lineFeatures.push({
-      type: 'Feature',
-      properties: { pathIdx: pi },
-      geometry: { type: 'LineString', coordinates: coordsClean }
-    });
-  }
-  src.setData({ type: 'FeatureCollection', features: lineFeatures });
-}
-
-function closestTOnSegPx(px, py, ax, ay, bx, by) {
-  const dx = bx - ax, dy = by - ay;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq < 1e-8) return 0;
-  return Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
-}
-
-/** Closest point on stitched chain plus segment index and t along that segment (screen-space). */
-function closestOnChainSegmentMeta(chain, lng, lat) {
-  const pt = map.project([lng, lat]);
-  let bestDist = Infinity;
-  let best = { segIdx: 0, t: 0, lng, lat };
-  for (let i = 0; i < chain.length - 1; i++) {
-    const A = map.project([chain[i][0], chain[i][1]]);
-    const B = map.project([chain[i + 1][0], chain[i + 1][1]]);
-    const t = closestTOnSegPx(pt.x, pt.y, A.x, A.y, B.x, B.y);
-    const mx = A.x + t * (B.x - A.x);
-    const my = A.y + t * (B.y - A.y);
-    const d = Math.hypot(pt.x - mx, pt.y - my);
-    if (d < bestDist) {
-      bestDist = d;
-      const ll = map.unproject([mx, my]);
-      best = { segIdx: i, t, lng: ll.lng, lat: ll.lat };
-    }
-  }
-  return best;
-}
-
-/** Closest (screen) point on chain whose arclength lies in [sMin, sMax] (meters along chain). */
-function closestOnChainSegmentMetaInArclenWindow(chain, lng, lat, sMin, sMax) {
-  const pt = map.project([lng, lat]);
-  let bestDist = Infinity;
-  let best = null;
-  let cum = 0;
-  for (let i = 0; i < chain.length - 1; i++) {
-    const ax = chain[i][0], ay = chain[i][1], bx = chain[i + 1][0], by = chain[i + 1][1];
-    const Lm = haversineMeters(ax, ay, bx, by);
-    const A = map.project([ax, ay]);
-    const B = map.project([bx, by]);
-    const t = closestTOnSegPx(pt.x, pt.y, A.x, A.y, B.x, B.y);
-    const mx = A.x + t * (B.x - A.x);
-    const my = A.y + t * (B.y - A.y);
-    const d = Math.hypot(pt.x - mx, pt.y - my);
-    const s = cum + (Lm > 1e-9 ? t * Lm : 0);
-    if (s >= sMin - 1e-4 && s <= sMax + 1e-4 && d < bestDist) {
-      bestDist = d;
-      const ll = map.unproject([mx, my]);
-      best = { segIdx: i, t, lng: ll.lng, lat: ll.lat };
-    }
-    cum += Lm;
-  }
-  return best;
-}
-
-function screenDistPxToChainMeta(chain, lng, lat, meta) {
-  const pt = map.project([lng, lat]);
-  const A = map.project([chain[meta.segIdx][0], chain[meta.segIdx][1]]);
-  const B = map.project([chain[meta.segIdx + 1][0], chain[meta.segIdx + 1][1]]);
-  const t = meta.t;
-  const mx = A.x + t * (B.x - A.x);
-  const my = A.y + t * (B.y - A.y);
-  return Math.hypot(pt.x - mx, pt.y - my);
-}
-
-function dedupeConsecutiveLngLatCoords(coords, minM) {
-  minM = minM == null ? 0.12 : minM;
-  if (!coords || coords.length < 2) return coords || [];
-  const out = [coords[0]];
-  for (let i = 1; i < coords.length; i++) {
-    const p = coords[i];
-    const q = out[out.length - 1];
-    if (haversineMeters(q[0], q[1], p[0], p[1]) < minM) continue;
-    out.push(p);
-  }
-  return out.length >= 2 ? out : coords;
-}
-
-function arclengthToChainPointMeta(chain, segIdx, t) {
-  let s = 0;
-  for (let i = 0; i < segIdx; i++) {
-    s += haversineMeters(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
-  }
-  const ax = chain[segIdx][0], ay = chain[segIdx][1], bx = chain[segIdx + 1][0], by = chain[segIdx + 1][1];
-  const Lm = haversineMeters(ax, ay, bx, by);
-  return s + (Lm > 1e-9 ? t * Lm : 0);
-}
-
-function chainTotalArclengthM(chain) {
-  let s = 0;
-  for (let i = 0; i < chain.length - 1; i++) {
-    s += haversineMeters(chain[i][0], chain[i][1], chain[i + 1][0], chain[i + 1][1]);
-  }
-  return s;
-}
-
-/** Sub-polyline of chain from arclength s0 to s1 (inclusive), with s0 <= s1 along chain order. */
-function sliceChainPolylineByArclen(chain, s0, s1) {
-  const total = chainTotalArclengthM(chain);
-  if (s1 < s0) {
-    const x = s0;
-    s0 = s1;
-    s1 = x;
-  }
-  s0 = Math.max(0, s0);
-  s1 = Math.min(total, s1);
-  if (s1 - s0 < 1e-4) return [];
-  const out = [];
-  const pushPt = (lng, lat) => {
-    if (out.length === 0) {
-      out.push([lng, lat]);
-      return;
-    }
-    const last = out[out.length - 1];
-    if (haversineMeters(last[0], last[1], lng, lat) < 0.05) return;
-    out.push([lng, lat]);
-  };
-  let cum = 0;
-  for (let i = 0; i < chain.length - 1; i++) {
-    const ax = chain[i][0], ay = chain[i][1], bx = chain[i + 1][0], by = chain[i + 1][1];
-    const Lm = haversineMeters(ax, ay, bx, by);
-    if (Lm < 1e-9) {
-      cum += Lm;
-      continue;
-    }
-    const segStart = cum;
-    const segEnd = cum + Lm;
-    const lo = Math.max(s0, segStart);
-    const hi = Math.min(s1, segEnd);
-    if (lo < hi - 1e-3) {
-      const t0 = (lo - segStart) / Lm;
-      const t1 = (hi - segStart) / Lm;
-      const p0x = ax + t0 * (bx - ax);
-      const p0y = ay + t0 * (by - ay);
-      const p1x = ax + t1 * (bx - ax);
-      const p1y = ay + t1 * (by - ay);
-      pushPt(p0x, p0y);
-      if (t1 - t0 > 1e-5) pushPt(p1x, p1y);
-    }
-    cum += Lm;
-  }
-  return out;
-}
-
-/** Dashed refine preview follows the stitched centerline between handles (not lon/lat chords). */
-function buildRoadFollowingPreviewCoordsForChain(chain, handles) {
-  if (!chain || chain.length < 2 || handles.length < 2) {
-    return handles.map(h => [h.lng, h.lat]);
-  }
-  const coords = [];
-  const total = chainTotalArclengthM(chain);
-  for (let i = 0; i < handles.length - 1; i++) {
-    const ha = handles[i];
-    const hb = handles[i + 1];
-    const ma = closestOnChainSegmentMeta(chain, ha.lng, ha.lat);
-    const sA = arclengthToChainPointMeta(chain, ma.segIdx, ma.t);
-    const chordM = Math.max(0.6, haversineMeters(ha.lng, ha.lat, hb.lng, hb.lat));
-    const win = Math.min(total * 0.49 + 1e-6, Math.max(REFINE_PREVIEW_LEG_ARCLEN_PAD_M, chordM * REFINE_PREVIEW_LEG_ARCLEN_PER_CHORD));
-    const sMin = Math.max(0, sA - win);
-    const sMax = Math.min(total, sA + win);
-    const mbGlobal = closestOnChainSegmentMeta(chain, hb.lng, hb.lat);
-    const sBg = arclengthToChainPointMeta(chain, mbGlobal.segIdx, mbGlobal.t);
-    let mb = mbGlobal;
-    if (sBg < sMin - 2 || sBg > sMax + 2) {
-      const mbWin = closestOnChainSegmentMetaInArclenWindow(chain, hb.lng, hb.lat, sMin, sMax);
-      if (mbWin) {
-        const dG = screenDistPxToChainMeta(chain, hb.lng, hb.lat, mbGlobal);
-        const dW = screenDistPxToChainMeta(chain, hb.lng, hb.lat, mbWin);
-        if (dW <= dG + REFINE_PREVIEW_BRANCH_HYST_PX) mb = mbWin;
-      }
-    }
-    const sB = arclengthToChainPointMeta(chain, mb.segIdx, mb.t);
-    let leg;
-    if (Math.abs(sB - sA) < 0.35) {
-      leg = [[ma.lng, ma.lat], [mb.lng, mb.lat]];
-    } else if (sA <= sB) {
-      leg = sliceChainPolylineByArclen(chain, sA, sB);
-    } else {
-      const seg = sliceChainPolylineByArclen(chain, sB, sA);
-      leg = seg.slice().reverse();
-    }
-    if (leg.length < 2) {
-      leg = [[ma.lng, ma.lat], [mb.lng, mb.lat]];
-    }
-    if (coords.length > 0 && leg.length > 0) {
-      const L = coords[coords.length - 1];
-      const F = leg[0];
-      if (haversineMeters(L[0], L[1], F[0], F[1]) < 0.15) {
-        leg = leg.slice(1);
-      }
-    }
-    for (let k = 0; k < leg.length; k++) coords.push(leg[k]);
-  }
-  return coords.length >= 2 ? coords : handles.map(h => [h.lng, h.lat]);
-}
-
-/**
- * Snap (lng,lat) to the **closest point** on the best nearby road LineString sub-segment
- * (perpendicular in screen space, then unproject). Used when opening refine / moving follower
- * handles so straight-span controls stay on the same centerline, not teleported to another
- * intersection.
- */
-function snapRefineHandleClosestOnBestEdge(lng, lat, opts) {
-  opts = opts || {};
-  const pt = map.project([lng, lat]);
-  const tang = { nx: 1, ny: 0, ready: false };
-  const only = opts.onlySelectedSegments ? selectedSegmentIdSet() : null;
-  let c = findBestCandidate(pt, {
-    dirOverride: tang,
-    allowSelected: true,
-    avoidRevisit: false,
-    onlyFeatureIds: only && only.size ? only : null
-  });
-  if (!c && only && only.size) {
-    c = findBestCandidate(pt, { dirOverride: tang, allowSelected: true, avoidRevisit: false });
-  }
-  if (!c || !c.edge) return { lng, lat };
-  if (c.vertexLLA && c.vertexLLB) {
-    const pa = map.project(c.vertexLLA);
-    const pb = map.project(c.vertexLLB);
-    const t = closestTOnSegPx(pt.x, pt.y, pa.x, pa.y, pb.x, pb.y);
-    const mx = pa.x + t * (pb.x - pa.x);
-    const my = pa.y + t * (pb.y - pa.y);
-    const ll = map.unproject([mx, my]);
-    return { lng: ll.lng, lat: ll.lat };
-  }
-  const mx = (c.edge.ax + c.edge.bx) / 2;
-  const my = (c.edge.ay + c.edge.by) / 2;
-  const ll = map.unproject([mx, my]);
-  return { lng: ll.lng, lat: ll.lat };
-}
-
-/**
- * Snap to **polyline endpoint** of the best nearby road sub-segment (intersection / block end).
- * Used for the **actively dragged** refine handle so it locks to draggable junction geometry.
- */
-function snapRefineHandleToRoadVertex(lng, lat) {
-  const pt = map.project([lng, lat]);
-  const tang = { nx: 1, ny: 0, ready: false };
-  const c = findBestCandidate(pt, { dirOverride: tang, allowSelected: true, avoidRevisit: false });
-  if (!c || !c.edge) return { lng, lat };
-  if (c.vertexLLA && c.vertexLLB) {
-    const pa = map.project(c.vertexLLA);
-    const pb = map.project(c.vertexLLB);
-    const dA = Math.hypot(pt.x - pa.x, pt.y - pa.y);
-    const dB = Math.hypot(pt.x - pb.x, pt.y - pb.y);
-    const pick = dA <= dB ? c.vertexLLA : c.vertexLLB;
-    return { lng: pick[0], lat: pick[1] };
-  }
-  const mx = (c.edge.ax + c.edge.bx) / 2;
-  const my = (c.edge.ay + c.edge.by) / 2;
-  const ll = map.unproject([mx, my]);
-  return { lng: ll.lng, lat: ll.lat };
-}
-
-/**
- * Remove consecutive handles closer than `epsM` (repeated until stable).
- * Multi-pass catches snap pile-ups where A–B and B–C were both above threshold but A–C is not.
- */
-function dedupeNearIdenticalRefineHandles(path, epsM) {
-  epsM = epsM == null ? 0.35 : epsM;
-  if (!path || path.handles.length < 2) return;
-  let guard = 0;
-  while (path.handles.length >= 2 && guard++ < path.handles.length + 8) {
-    const h = path.handles;
-    const out = [h[0]];
-    for (let i = 1; i < h.length; i++) {
-      const prev = out[out.length - 1];
-      if (haversineMeters(prev.lng, prev.lat, h[i].lng, h[i].lat) < epsM) continue;
-      out.push(h[i]);
-    }
-    if (out.length === h.length) break;
-    if (out.length >= 2) path.handles = out;
-    else break;
-  }
-}
-
-function distPtToCandidateEdgePx(pt, cand) {
-  if (!cand || !cand.edge) return 1e9;
-  return ptSegDist(pt.x, pt.y, cand.edge.ax, cand.edge.ay, cand.edge.bx, cand.edge.by);
-}
-
-/**
- * Prefer continuing on `prevFidKey` unless the globally best edge is clearly closer — stops
- * collecting every arm of every intersection along the handle chord.
- */
-function pickRefineChordSnapCandidate(pt, prevFidKey) {
-  const isoDir = { nx: 1, ny: 0, ready: false };
-  const base = { dirOverride: isoDir, allowSelected: true, avoidRevisit: false };
-  const best = findBestCandidate(pt, base);
-  if (!best || !prevFidKey) return best;
-  if (String(best.featureId) === prevFidKey) return best;
-  const cont = findBestCandidate(pt, {
-    ...base,
-    onlyFeatureIds: new Set([prevFidKey])
-  });
-  if (!cont) return best;
-  const dBest = distPtToCandidateEdgePx(pt, best);
-  const dCont = distPtToCandidateEdgePx(pt, cont);
-  if (dCont <= dBest + REFINE_COLLECT_HYSTERESIS_PX) return cont;
-  return best;
-}
-
-/** Drop consecutive duplicate segment ids (shared junction when concatenating per-path lists). */
-function dedupeConsecutiveOrderedSegmentIds(ids) {
-  const out = [];
-  for (let i = 0; i < ids.length; i++) {
-    const id = ids[i];
-    if (out.length && String(out[out.length - 1]) === String(id)) continue;
-    out.push(id);
-  }
-  return out;
-}
-
-/**
- * Walk handle polyline legs → MVT segments for `replaceEntireSelection`.
- * - **Isotropic** snap (no chord-only direction bias) so laterals can win when clearly closer.
- * - **Hysteresis** along the sample sequence so we do not hop between intersection arms every step.
- * - **Coarser** adaptive spacing than before (fewer samples at each node).
- *
- * @param {'global' | 'perPath'} seenScope
- *   `global` = one Set for all paths (legacy; chord samples on path A can steal ids before path B runs).
- *   `perPath` = fresh Set per refine path so disjoint chains do not cross-contaminate segment order.
- */
-function collectIdsAlongHandlePathInner(seenScope) {
-  const propsById = new Map();
-  const ordered = [];
-  const globalSeen = seenScope === 'global' ? new Set() : null;
-  for (let pi = 0; pi < refinePaths.length; pi++) {
-    const pathSeen = seenScope === 'perPath' ? new Set() : globalSeen;
-    const handles = refinePaths[pi].handles;
-    for (let leg = 0; leg < handles.length - 1; leg++) {
-      const ha = handles[leg], hb = handles[leg + 1];
-      const dx = hb.lng - ha.lng, dy = hb.lat - ha.lat;
-      const chordM = Math.max(1, haversineMeters(ha.lng, ha.lat, hb.lng, hb.lat));
-      const steps = Math.min(
-        REFINE_CHORD_MAX_STEPS,
-        Math.max(REFINE_CHORD_MIN_STEPS, Math.ceil(chordM / REFINE_CHORD_SAMPLE_STEP_M))
-      );
-      let prevFidKey = null;
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const lng = ha.lng + dx * t, lat = ha.lat + dy * t;
-        const pt = map.project([lng, lat]);
-        const c = pickRefineChordSnapCandidate(pt, prevFidKey);
-        if (!c) continue;
-        const fid = c.featureId;
-        const fidKey = fid == null ? '' : String(fid);
-        prevFidKey = fidKey;
-        propsById.set(fid, c.props);
-        if (!pathSeen.has(fidKey)) {
-          pathSeen.add(fidKey);
-          ordered.push(fid);
-        }
-      }
-    }
-  }
-  return { ordered, propsById };
-}
-
-/**
- * Walk handle polyline legs → MVT segments for `replaceEntireSelection`.
- * Uses **per-path** dedupe so dragging one chain does not drop or reorder segments on other chains.
- */
-function collectIdsAlongHandlePath() {
-  const inner = collectIdsAlongHandlePathInner('perPath');
-  let ordered = dedupeConsecutiveOrderedSegmentIds(inner.ordered);
-  if (refineDebugEnabled() && refinePaths.length > 1) {
-    const g = collectIdsAlongHandlePathInner('global');
-    const gOrd = dedupeConsecutiveOrderedSegmentIds(g.ordered);
-    const sameLen = ordered.length === gOrd.length;
-    let sameSeq = sameLen;
-    if (sameSeq) {
-      for (let i = 0; i < ordered.length; i++) {
-        if (String(ordered[i]) !== String(gOrd[i])) {
-          sameSeq = false;
-          break;
-        }
-      }
-    }
-    const setP = new Set(ordered.map(String));
-    const setG = new Set(gOrd.map(String));
-    let onlyInGlobal = 0;
-    let onlyInPerPath = 0;
-    setG.forEach(k => { if (!setP.has(k)) onlyInGlobal++; });
-    setP.forEach(k => { if (!setG.has(k)) onlyInPerPath++; });
-    refineDebugAgentLog(
-      'collectIdsAlongHandlePath',
-      'seenScope compare',
-      {
-        pathCount: refinePaths.length,
-        perPathLen: ordered.length,
-        globalLen: gOrd.length,
-        sameSequence: sameSeq,
-        onlyInGlobal,
-        onlyInPerPath
-      },
-      'H-seen'
-    );
-  }
-  return { ordered, propsById: inner.propsById };
-}
-
-/** Debug: compare global vs per-path collect (call with refine open, multi-path). */
-function refineTest_collectSeenCompare() {
-  if (!refineMode || refinePaths.length < 2) {
-    return { ok: false, err: 'need refineMode and refinePaths.length >= 2' };
-  }
-  const p = dedupeConsecutiveOrderedSegmentIds(collectIdsAlongHandlePathInner('perPath').ordered);
-  const g = dedupeConsecutiveOrderedSegmentIds(collectIdsAlongHandlePathInner('global').ordered);
-  const setP = new Set(p.map(String));
-  const setG = new Set(g.map(String));
-  const onlyG = [...setG].filter(k => !setP.has(k)).map(Number);
-  const onlyP = [...setP].filter(k => !setG.has(k)).map(Number);
-  return {
-    ok: true,
-    refinePathCount: refinePaths.length,
-    perPathLen: p.length,
-    globalLen: g.length,
-    lengthDelta: p.length - g.length,
-    onlyInGlobal: onlyG,
-    onlyInPerPath: onlyP
-  };
-}
-
-function snapshotRefineSelection() {
-  return {
-    segments: new Map(selectedSegments),
-    stroke: strokeOrderedSegmentIds.slice()
-  };
-}
-
-function selectionSnapshotsEqual(a, b) {
-  if (!a || !b) return false;
-  if (a.stroke.length !== b.stroke.length) return false;
-  for (let i = 0; i < a.stroke.length; i++) {
-    if (a.stroke[i] !== b.stroke[i]) return false;
-  }
-  return true;
-}
-
-function restoreRefineUndoSnapshot(snap) {
-  const ordered = snap.stroke.slice();
-  const propsById = new Map();
-  for (let i = 0; i < ordered.length; i++) {
-    const id = ordered[i];
-    const p = snap.segments.get(id);
-    if (p) propsById.set(id, p);
-  }
-  if (!ordered.length) return;
-  replaceEntireSelection(ordered, propsById);
-}
-
-function updateRefineUndoUi() {
-  const btn = document.getElementById('refine-undo-btn');
-  const meta = document.getElementById('refine-undo-meta');
-  if (!btn || !meta) return;
-  const n = refineUndoStack.length;
-  btn.disabled = n === 0;
-  meta.textContent = n === 0 ? 'No refine steps yet' : `${n} undo step${n !== 1 ? 's' : ''} available`;
-}
-
-function refineUndoLast() {
-  if (!refineMode || refineUndoStack.length === 0) return;
-  const snap = refineUndoStack.pop();
-  restoreRefineUndoSnapshot(snap);
-  rebuildRefinePathsAfterLiveCommit();
-  updateRefineUndoUi();
-  syncRefineHandleSource();
-  syncRefinePreviewLine();
-}
-
-/** Nearest point on stitched chain polyline (screen-space segment distance) for handle reprojection. */
-function closestPointOnChainPx(chain, lng, lat) {
-  const m = closestOnChainSegmentMeta(chain, lng, lat);
-  return { lng: m.lng, lat: m.lat };
-}
-
-/**
- * After live segment replacement, keep the **same handle count** and re-seat each handle on the
- * new centerline instead of re-running `placeHandlesForChain` + even cap (which injected phantom
- * dots mid-route) whenever stroke order changed slightly.
- */
-function tryReprojectRefineHandlesOntoChains(chains) {
-  if (refinePaths.length !== chains.length) return false;
-  for (let pi = 0; pi < chains.length; pi++) {
-    const ch = chains[pi];
-    const p = refinePaths[pi];
-    if (!ch || ch.length < 2 || !p || !p.handles || p.handles.length < 2) return false;
-  }
-  for (let pi = 0; pi < chains.length; pi++) {
-    const chain = chains[pi];
-    const path = refinePaths[pi];
-    for (let hi = 0; hi < path.handles.length; hi++) {
-      const h = path.handles[hi];
-      const p0 = closestPointOnChainPx(chain, h.lng, h.lat);
-      path.handles[hi] = snapRefineHandleClosestOnBestEdge(p0.lng, p0.lat, { onlySelectedSegments: true });
-    }
-    dedupeNearIdenticalRefineHandles(path, REFINE_HANDLE_POST_SNAP_DEDUPE_M);
-  }
-  return true;
-}
-
-function rebuildRefinePathsAfterLiveCommit() {
-  const order = strokeOrderedSegmentIds.length
-    ? strokeOrderedSegmentIds.slice()
-    : dedupeSelectionHistoryOrder();
-  if (order.length === 0) return;
-  const chains = buildMultiChainsFromOrderedIds(order);
-  if (!chains.length) return;
-  if (!tryReprojectRefineHandlesOntoChains(chains)) {
-    const next = buildRefinePathsFromChains(chains);
-    if (next.length && next.some(p => p.handles.length >= 2)) refinePaths = next;
-  }
-}
-
-function replaceEntireSelection(orderedIds, propsById) {
-  selectedSegments.forEach((_, id) => {
-    map.setFeatureState(
-      { source: 'segments', sourceLayer: 'update_score_v2', id },
-      { selected: false, pending: false }
-    );
-  });
-  selectedSegments.clear();
-  selectionHistory.length = 0;
-  strokeOrderedSegmentIds.length = 0;
-  lastCommittedEdge = null;
-  strokeBatchesHistory.length = 0;
-  orderedIds.forEach(id => {
-    const props = propsById.get(id);
-    if (!props) return;
-    selectedSegments.set(id, props);
-    selectionHistory.push(id);
-    strokeOrderedSegmentIds.push(id);
-    map.setFeatureState(
-      { source: 'segments', sourceLayer: 'update_score_v2', id },
-      { selected: true, pending: false }
-    );
-  });
-  updateBadge();
-}
-
-function detachRefineGlobalPointerUp() {
-  if (refinePointerUpBound) {
-    window.removeEventListener('pointerup', refinePointerUpBound, true);
-    refinePointerUpBound = null;
-  }
-}
-
-function refineGlobalPointerUp(e) {
-  if (!refineMode || !refineDrag) return;
-  refineMapMouseUp(e);
-}
-
-function exitRefineMode(restoreSnapshot) {
-  refineMode = false;
-  refineDrag = null;
-  refinePreDragSnapshot = null;
-  refineGestureMoved = false;
-  detachRefineGlobalPointerUp();
-  document.getElementById('refineBtn').classList.remove('active');
-  refineHintEl().classList.remove('visible');
-  refineToolbarEl().classList.remove('visible');
-  refineUndoStack.length = 0;
-  updateRefineUndoUi();
-  setRefineLayersVisible(false);
-  if (!paintMode) map.dragPan.enable();
-  if (!paintMode) map.doubleClickZoom.enable();
-  map.scrollZoom.enable();
-  map.touchZoomRotate.enable();
-  if (restoreSnapshot && refineSnapshot) {
-    replaceEntireSelection(
-      [...refineSnapshot.keys()],
-      refineSnapshot
-    );
-  }
-  refineSnapshot = null;
-  refinePaths = [];
-  const hSrc = map.getSource('route-refine-handles');
-  const pSrc = map.getSource('route-refine-preview');
-  if (hSrc) hSrc.setData({ type: 'FeatureCollection', features: [] });
-  if (pSrc) pSrc.setData({ type: 'FeatureCollection', features: [] });
-}
-
-function toggleRefineMode() {
-  if (refineMode) {
-    /* Exit refine but keep the current selection (live commits already applied). */
-    exitRefineMode(false);
-    return;
-  }
-  if (paintMode) togglePaintMode();
-  if (selectedSegments.size === 0) return;
-
-  const order = strokeOrderedSegmentIds.length
-    ? strokeOrderedSegmentIds.slice()
-    : dedupeSelectionHistoryOrder();
-  if (order.length === 0) return;
-
-  const chains = buildMultiChainsFromOrderedIds(order);
-  if (chains.length === 0) return;
-
-  refineSnapshot = new Map(selectedSegments);
-  refinePaths = buildRefinePathsFromChains(chains);
-  if (refinePaths.length === 0 || !refinePaths.some(p => p.handles.length >= 2)) return;
-
-  refineMode = true;
-  refineUndoStack.length = 0;
-  updateRefineUndoUi();
-  document.getElementById('refineBtn').classList.add('active');
-  refineHintEl().classList.add('visible');
-  refineToolbarEl().classList.add('visible');
-  setRefineLayersVisible(true);
-  syncRefineHandleSource();
-  syncRefinePreviewLine();
-  map.doubleClickZoom.disable();
-}
-
-function refineMapMouseDown(e) {
-  if (!refineMode || e.originalEvent.button !== 0) return;
-  const hits = map.queryRenderedFeatures(e.point, { layers: ['route-refine-handles'] });
-  if (!hits.length) return;
-  const pi = hits[0].properties.pathIdx;
-  const hi = hits[0].properties.handleIdx;
-  if (pi === undefined || pi === null || hi === undefined || hi === null) return;
-  refinePreDragSnapshot = snapshotRefineSelection();
-  refineGestureMoved = false;
-  const pathForDrag = refinePaths[pi];
-  if (!pathForDrag || !pathForDrag.handles.length) return;
-  refineDrag = {
-    pathIdx: pi,
-    handleIdx: hi,
-    frozenHandles: pathForDrag.handles.map(h => ({ lng: h.lng, lat: h.lat }))
-  };
-  map.dragPan.disable();
-  refinePointerUpBound = refineGlobalPointerUp;
-  window.addEventListener('pointerup', refinePointerUpBound, true);
-  e.preventDefault();
-  if (e.originalEvent && e.originalEvent.stopPropagation) e.originalEvent.stopPropagation();
-}
-
-function refineMapMouseMove(e) {
-  if (!refineMode || !refineDrag) return;
-  const path = refinePaths[refineDrag.pathIdx];
-  const hi = refineDrag.handleIdx;
-  const fh = refineDrag.frozenHandles;
-  if (!path || path.handles.length < 2 || path.handles[hi] === undefined || !fh || fh.length !== path.handles.length) return;
-
-  const snapped = snapRefineHandleToRoadVertex(e.lngLat.lng, e.lngLat.lat);
-  const old = fh[hi];
-  const dLng = snapped.lng - old.lng;
-  const dLat = snapped.lat - old.lat;
-  if (dLng === 0 && dLat === 0) return;
-
-  refineGestureMoved = true;
-  for (let j = 0; j < path.handles.length; j++) {
-    if (j === hi) path.handles[j] = snapped;
-    else path.handles[j] = { lng: fh[j].lng, lat: fh[j].lat };
-  }
-
-  syncRefineHandleSource();
-  syncRefinePreviewLine();
-}
-
-function snapshotRefineHandlePositions() {
-  return refinePaths.map((p, pi) => ({
-    pi,
-    pts: (p.handles || []).map(h => ({ lng: h.lng, lat: h.lat }))
-  }));
-}
-
-/** Deep clone of all refine path handle positions (arrays of lng/lat). */
-function cloneRefineHandlesArrays() {
-  return refinePaths.map(p => (p.handles || []).map(h => ({ lng: h.lng, lat: h.lat })));
-}
-
-/**
- * After one handle commit + rebuild: drift on **other paths** (pi ≠ pathIdx) and on **same path**
- * handles whose index was not the edited index — only where before/after lengths match for that path.
- * `topologyChanged` means path count changed (e.g. 1→3 chains after extend): new paths are not “wrong drift”.
- */
-function refineMeasureSameShapeAfterCommit(before, pathIdx, handleIdx) {
-  const after = cloneRefineHandlesArrays();
-  const out = {
-    pathCountBefore: before.length,
-    pathCountAfter: after.length,
-    topologyChanged: before.length !== after.length,
-    otherPathsMaxDriftM: 0,
-    otherPathsComparedPairs: 0,
-    otherPathsSkippedLenMismatch: false,
-    samePathOtherMaxDriftM: 0,
-    samePathOtherComparedPairs: 0,
-    samePathSkippedLenMismatch: false
-  };
-  const n = Math.min(before.length, after.length);
-  for (let pi = 0; pi < n; pi++) {
-    const b = before[pi];
-    const a = after[pi];
-    if (!b || !a) continue;
-    if (b.length !== a.length) {
-      if (pi !== pathIdx) out.otherPathsSkippedLenMismatch = true;
-      else out.samePathSkippedLenMismatch = true;
-      continue;
-    }
-    for (let hi = 0; hi < a.length; hi++) {
-      const d = haversineMeters(b[hi].lng, b[hi].lat, a[hi].lng, a[hi].lat);
-      if (pi !== pathIdx) {
-        out.otherPathsComparedPairs++;
-        out.otherPathsMaxDriftM = Math.max(out.otherPathsMaxDriftM, d);
-      } else if (hi !== handleIdx) {
-        out.samePathOtherComparedPairs++;
-        out.samePathOtherMaxDriftM = Math.max(out.samePathOtherMaxDriftM, d);
-      }
-    }
-  }
-  return out;
-}
-
-/** Max meters any handle moved on paths other than `dragPi` (same index; false if counts diverge). */
-function maxNonDragPathHandleDriftM(before, after, dragPi) {
-  let max = 0;
-  let lengthMismatch = false;
-  for (let pi = 0; pi < after.length; pi++) {
-    if (pi === dragPi) continue;
-    const b = before[pi];
-    const a = after[pi];
-    if (!b || !a || !b.pts || !a.pts) continue;
-    if (b.pts.length !== a.pts.length) {
-      lengthMismatch = true;
-      continue;
-    }
-    for (let i = 0; i < a.pts.length; i++) {
-      max = Math.max(
-        max,
-        haversineMeters(b.pts[i].lng, b.pts[i].lat, a.pts[i].lng, a.pts[i].lat)
-      );
-    }
-  }
-  return { maxM: max, lengthMismatch };
-}
-
-function refineMapMouseUp(e) {
-  if (!refineDrag) return;
-  const dragPi = refineDrag.pathIdx;
-  const beforeHandles = refineDebugEnabled() ? snapshotRefineHandlePositions() : null;
-  const pi = refineDrag.pathIdx;
-  const path = refinePaths[pi];
-  if (path) dedupeNearIdenticalRefineHandles(path);
-  const { ordered, propsById } = collectIdsAlongHandlePath();
-  if (ordered.length) replaceEntireSelection(ordered, propsById);
-  detachRefineGlobalPointerUp();
-  refineDrag = null;
-  if (!paintMode) map.dragPan.enable();
-
-  if (refineMode && refineGestureMoved && refinePreDragSnapshot) {
-    const afterSnap = snapshotRefineSelection();
-    if (!selectionSnapshotsEqual(refinePreDragSnapshot, afterSnap)) {
-      refineUndoStack.push(refinePreDragSnapshot);
-      while (refineUndoStack.length > REFINE_UNDO_MAX) refineUndoStack.shift();
-      updateRefineUndoUi();
-    }
-  }
-  refinePreDragSnapshot = null;
-  refineGestureMoved = false;
-
-  if (refineMode) {
-    rebuildRefinePathsAfterLiveCommit();
-    refineDebugDumpNetwork('after mouseup rebuild');
-    if (beforeHandles && refinePaths.length > 1) {
-      const drift = maxNonDragPathHandleDriftM(beforeHandles, snapshotRefineHandlePositions(), dragPi);
-      refineDebugAgentLog(
-        'refineMapMouseUp',
-        'non-drag path handle drift after rebuild',
-        { dragPi, driftMaxM: drift.maxM, driftLengthMismatch: drift.lengthMismatch, pathCount: refinePaths.length },
-        'H-drift'
-      );
-    }
-    syncRefineHandleSource();
-    syncRefinePreviewLine();
-  }
-}
-
-/** Network summary for assertions (stroke order, stitched chains, handle counts). */
-/**
- * Heuristic audit after handles are built: nearly-coincident consecutive dots (snap pile-up)
- * and strong chain bends with no nearby handle (intersection-like gap).
- */
-function refineTest_dotSanityAudit() {
-  const order = strokeOrderedSegmentIds.length ? strokeOrderedSegmentIds.slice() : dedupeSelectionHistoryOrder();
-  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
-  let stackedEdges = 0;
-  let totalEdges = 0;
-  const misses = [];
-  const minTurnAudit = REFINE_MIN_TURN_DEG;
-  for (let pi = 0; pi < refinePaths.length; pi++) {
-    const handles = refinePaths[pi].handles;
-    const ch = pi < chains.length ? chains[pi] : null;
-    for (let i = 1; i < handles.length; i++) {
-      totalEdges++;
-      const d = haversineMeters(handles[i - 1].lng, handles[i - 1].lat, handles[i].lng, handles[i].lat);
-      if (d < REFINE_HANDLE_POST_SNAP_DEDUPE_M) stackedEdges++;
-    }
-    if (!ch || ch.length < 3) continue;
-    const pr = pruneNearDuplicateChainPoints(ch, REFINE_CHAIN_VERTEX_MERGE_M);
-    for (let j = 1; j < pr.length - 1; j++) {
-      const br0 = bearingDeg(pr[j - 1][0], pr[j - 1][1], pr[j][0], pr[j][1]);
-      const br1 = bearingDeg(pr[j][0], pr[j][1], pr[j + 1][0], pr[j + 1][1]);
-      const turn = angleDeltaDeg(br0, br1);
-      if (turn < minTurnAudit) continue;
-      /* Hairpin / stitch-back in stitched polyline — not a missing intersection handle. */
-      if (turn >= 165) continue;
-      const px = pr[j][0], py = pr[j][1];
-      let mind = Infinity;
-      for (let k = 0; k < handles.length; k++) {
-        mind = Math.min(mind, haversineMeters(px, py, handles[k].lng, handles[k].lat));
-      }
-      if (mind > 14) misses.push({ pi, turn: Math.round(turn * 10) / 10, mindM: Math.round(mind) });
-    }
-  }
-  return {
-    paths: refinePaths.length,
-    chainCount: chains.length,
-    stackedEdges,
-    totalEdges,
-    stackedFrac: totalEdges ? Math.round((10000 * stackedEdges) / totalEdges) / 10000 : 0,
-    missedStrongCornerApprox: misses.length,
-    missedSample: misses.slice(0, 5)
-  };
-}
-
-function refineTest_networkSnapshot() {
-  const order = strokeOrderedSegmentIds.length ? strokeOrderedSegmentIds.slice() : dedupeSelectionHistoryOrder();
-  const chains = order.length ? buildMultiChainsFromOrderedIds(order) : [];
-  return {
-    orderLen: order.length,
-    orderHead: order.slice(0, 12).map(String),
-    orderTail: order.slice(-6).map(String),
-    chainCount: chains.length,
-    chainVtxLens: chains.map(c => (c && c.length) || 0),
-    chainTotalM: chains.map(c => (c && c.length >= 2 ? chainTotalArclengthM(c) : 0)),
-    refinePathCount: refinePaths.length,
-    refinePathHandleLens: refinePaths.map(p => (p.handles && p.handles.length) || 0)
-  };
-}
-
-/**
- * Move one handle (vertex snap), then same commit path as refine pointer-up:
- * collect → replace → rebuild → sync.
- */
-function refineTest_applyHandleCommit(pathIdx, handleIdx, lng, lat, label) {
-  if (!refineMode) {
-    return { ok: false, err: 'refineMode off' };
-  }
-  const path = refinePaths[pathIdx];
-  if (!path || handleIdx < 0 || handleIdx >= path.handles.length) {
-    return { ok: false, err: 'bad path/handle', pathIdx, handleIdx };
-  }
-  const handlesBeforeCommit = refineDebugEnabled() ? cloneRefineHandlesArrays() : null;
-  const beforeHandles = refineDebugEnabled() && refinePaths.length > 1
-    ? snapshotRefineHandlePositions()
-    : null;
-  refinePreDragSnapshot = snapshotRefineSelection();
-  refineGestureMoved = true;
-  const before = refineTest_networkSnapshot();
-  path.handles[handleIdx] = snapRefineHandleToRoadVertex(lng, lat);
-  dedupeNearIdenticalRefineHandles(path);
-  const { ordered, propsById } = collectIdsAlongHandlePath();
-  if (ordered.length) replaceEntireSelection(ordered, propsById);
-  if (refineMode && refinePreDragSnapshot) {
-    const afterSnap = snapshotRefineSelection();
-    if (!selectionSnapshotsEqual(refinePreDragSnapshot, afterSnap)) {
-      refineUndoStack.push(refinePreDragSnapshot);
-      while (refineUndoStack.length > REFINE_UNDO_MAX) refineUndoStack.shift();
-      updateRefineUndoUi();
-    }
-  }
-  refinePreDragSnapshot = null;
-  refineGestureMoved = false;
-  if (refineMode) {
-    rebuildRefinePathsAfterLiveCommit();
-    refineDebugDumpNetwork((label || 'refineTest') + ' post-rebuild');
-    if (beforeHandles && refinePaths.length > 1) {
-      const drift = maxNonDragPathHandleDriftM(
-        beforeHandles,
-        snapshotRefineHandlePositions(),
-        pathIdx
-      );
-      refineDebugAgentLog(
-        'refineTest_applyHandleCommit',
-        label || 'programmatic commit',
-        {
-          pathIdx,
-          pathCount: refinePaths.length,
-          driftMaxM: drift.maxM,
-          driftLengthMismatch: drift.lengthMismatch
-        },
-        'H-drift'
-      );
-    }
-    if (handlesBeforeCommit) {
-      const shape = refineMeasureSameShapeAfterCommit(handlesBeforeCommit, pathIdx, handleIdx);
-      refineDebugAgentLog(
-        'refineTest_applyHandleCommit',
-        label || 'same-shape audit',
-        { pathIdx, handleIdx, ...shape },
-        'H-sameshape'
-      );
-    }
-    syncRefineHandleSource();
-    syncRefinePreviewLine();
-  }
-  const after = refineTest_networkSnapshot();
-  return { ok: true, label: label || 'apply', before, after };
-}
-
-function refineTest_nudgeHandleScreen(pathIdx, handleIdx, dxp, dyp, label) {
-  const path = refinePaths[pathIdx];
-  if (!path || !path.handles[handleIdx]) {
-    return { ok: false, err: 'no handle', pathIdx, handleIdx };
-  }
-  const h = path.handles[handleIdx];
-  const p = map.project([h.lng, h.lat]);
-  const ll = map.unproject([p.x + dxp, p.y + dyp]);
-  return refineTest_applyHandleCommit(pathIdx, handleIdx, ll.lng, ll.lat, label);
-}
-
-/** Key test 1: extend route — nudge last handle east-ish on screen (new intersection / segments). */
-function refineTest_scenarioExtendEnd() {
-  const path = refinePaths[0];
-  if (!path || path.handles.length < 2) return { ok: false, err: 'need refine path with handles' };
-  const hi = path.handles.length - 1;
-  return refineTest_nudgeHandleScreen(0, hi, 140, -22, 'scenario extend end');
-}
-
-/** Key test 2: mid-handle diagonal nudge (simulates pulling a corner / right-turn block). */
-function refineTest_scenarioRightTurnMid() {
-  const path = refinePaths[0];
-  if (!path || path.handles.length < 2) return { ok: false, err: 'need refine path with handles' };
-  const hi = Math.max(1, Math.floor(path.handles.length / 2));
-  return refineTest_nudgeHandleScreen(0, hi, 92, 78, 'scenario right turn mid');
-}
-
-/** Key test 3: retract — nudge last handle toward first on screen (fewer intersections / shorter). */
-function refineTest_scenarioShrinkEnd() {
-  const path = refinePaths[0];
-  if (!path || path.handles.length < 2) return { ok: false, err: 'need refine path with handles' };
-  const hi = path.handles.length - 1;
-  const h0 = path.handles[0];
-  const he = path.handles[hi];
-  const p0 = map.project([h0.lng, h0.lat]);
-  const pe = map.project([he.lng, he.lat]);
-  const vx = p0.x - pe.x;
-  const vy = p0.y - pe.y;
-  const len = Math.hypot(vx, vy) || 1;
-  return refineTest_nudgeHandleScreen(0, hi, (vx / len) * 100, (vy / len) * 100, 'scenario shrink end');
-}
-
-/** Compact summary for agent ingest logs (move-out / move-in programmatic suite). */
-function refineAgentSummarizeCommitResult(r) {
-  if (!r || !r.ok) return { ok: false, err: r && r.err };
-  return {
-    ok: true,
-    orderLen: r.after.orderLen,
-    chainCount: r.after.chainCount,
-    refinePathCount: r.after.refinePathCount,
-    orderDelta: r.after.orderLen - r.before.orderLen
-  };
-}
-
-/** Agent-driven: same code as T extend / T shrink / T right (screen nudge + commit). */
-function refineAgentRunMcpSuite() {
-  try {
-    refineDebugSeedNearCenter(10);
-    toggleRefineMode();
-    if (!refineMode) {
-      refineDebugAgentLog('refineAgent', 'suite skip', { err: 'refineMode stayed off' }, 'agent');
-      return;
-    }
-    const base = refineTest_networkSnapshot();
-    refineDebugAgentLog(
-      'refineAgent',
-      'baseline after seed+refine',
-      {
-        orderLen: base.orderLen,
-        chainCount: base.chainCount,
-        refinePathCount: base.refinePathCount
-      },
-      'agent'
-    );
-    const r1 = refineTest_scenarioExtendEnd();
-    refineDebugAgentLog('refineAgent', 'after move-out (extend)', refineAgentSummarizeCommitResult(r1), 'agent');
-    const r2 = refineTest_scenarioShrinkEnd();
-    refineDebugAgentLog('refineAgent', 'after move-in (shrink)', refineAgentSummarizeCommitResult(r2), 'agent');
-    const r3 = refineTest_scenarioRightTurnMid();
-    refineDebugAgentLog('refineAgent', 'after lateral (right)', refineAgentSummarizeCommitResult(r3), 'agent');
-    const dots = refineTest_dotSanityAudit();
-    refineDebugAgentLog('refineAgent', 'dot sanity after three scenarios', dots, 'agent');
-  } catch (err) {
-    refineDebugAgentLog('refineAgent', 'suite error', { err: String(err) }, 'agent');
-  }
-}
-
-/** Multi-path: fractured seed + one end-handle nudge on path 0 (exercises H-drift on other paths). */
-function refineAgentRunFracturedNudgeSuite() {
-  try {
-    refineDebugSeedFractured(10);
-    toggleRefineMode();
-    if (!refineMode) {
-      refineDebugAgentLog('refineAgent', 'fractured suite skip', { err: 'refineMode stayed off' }, 'agent');
-      return;
-    }
-    const base = refineTest_networkSnapshot();
-    refineDebugAgentLog(
-      'refineAgent',
-      'fractured baseline',
-      {
-        orderLen: base.orderLen,
-        chainCount: base.chainCount,
-        refinePathCount: base.refinePathCount
-      },
-      'agent'
-    );
-    const path = refinePaths[0];
-    const hi = path && path.handles.length >= 2 ? path.handles.length - 1 : -1;
-    const r = hi >= 0
-      ? refineTest_nudgeHandleScreen(0, hi, 90, -28, 'agent fractured nudge end')
-      : { ok: false, err: 'no handles' };
-    refineDebugAgentLog(
-      'refineAgent',
-      'after fractured nudge',
-      refineAgentSummarizeCommitResult(r),
-      'agent'
-    );
-  } catch (err) {
-    refineDebugAgentLog('refineAgent', 'fractured suite error', { err: String(err) }, 'agent');
-  }
-}
-// #endregion
 
 /* ════════════════════════════════════════════════════════
    PAINT MODE — lookahead snap queue, continuity prior, scoped
@@ -2398,6 +1067,14 @@ const paintCanvas = document.getElementById('paint-canvas');
 const paintCtx    = paintCanvas.getContext('2d');
 const paintHint   = document.getElementById('paint-hint');
 
+const unpaintCanvas = document.getElementById('unpaint-canvas');
+const unpaintCtx    = unpaintCanvas.getContext('2d');
+const unpaintHint   = document.getElementById('unpaint-hint');
+let unpainting = false;
+let unpaintPoints = [];
+let unpaintSnapThrottle = null;
+let unpaintFadeAnim = null;
+
 let snapQueue = [];
 let selectionHistory = [];
 let lastCommittedEdge = null;
@@ -2407,6 +1084,8 @@ let idsTouchedThisStroke = new Set();
 function resizeCanvas() {
   paintCanvas.width  = window.innerWidth;
   paintCanvas.height = window.innerHeight;
+  unpaintCanvas.width  = window.innerWidth;
+  unpaintCanvas.height = window.innerHeight;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -2419,7 +1098,7 @@ function resetSnapQueueForNewStroke() {
 }
 
 function togglePaintMode() {
-  if (refineMode) exitRefineMode(true);
+  if (unpaintMode) toggleUnpaintMode();
   if (paintMode && painting) {
     painting = false;
     if (snapThrottle) { clearTimeout(snapThrottle); snapThrottle = null; }
@@ -2436,7 +1115,7 @@ function togglePaintMode() {
     map.doubleClickZoom.disable();
     map.touchZoomRotate.disable();
     map.getCanvas().style.cursor = '';
-  } else {
+  } else if (!unpaintMode) {
     map.dragPan.enable();
     map.scrollZoom.enable();
     map.doubleClickZoom.enable();
@@ -2444,9 +1123,15 @@ function togglePaintMode() {
   }
 }
 
+function isStrokeTapGesture(pts, maxDistPx) {
+  maxDistPx = maxDistPx || 14;
+  if (!pts || pts.length < 1) return false;
+  const p0 = pts[0], p1 = pts[pts.length - 1];
+  return Math.hypot(p1.x - p0.x, p1.y - p0.y) < maxDistPx && pts.length <= 10;
+}
+
 paintCanvas.addEventListener('pointerdown', (e) => {
   painting = true;
-  lastPointerAlt = e.altKey;
   paintPoints = [{ x: e.clientX, y: e.clientY }];
   paintCanvas.setPointerCapture(e.pointerId);
   cancelFade();
@@ -2457,7 +1142,6 @@ paintCanvas.addEventListener('pointerdown', (e) => {
 
 paintCanvas.addEventListener('pointermove', (e) => {
   if (!painting) return;
-  lastPointerAlt = e.altKey;
   paintPoints.push({ x: e.clientX, y: e.clientY });
   updateMomentum(paintPoints);
   drawSpline(paintPoints, 0.7);
@@ -2465,8 +1149,7 @@ paintCanvas.addEventListener('pointermove', (e) => {
   if (!snapThrottle) {
     const pt = { x: e.clientX, y: e.clientY };
     snapThrottle = setTimeout(() => {
-      if (lastPointerAlt) eraseNearPaintPoint(pt);
-      else enqueuePaintSnap(pt);
+      enqueuePaintSnap(pt);
       snapThrottle = null;
     }, 50);
   }
@@ -2476,8 +1159,26 @@ paintCanvas.addEventListener('pointerup', (e) => {
   painting = false;
   paintPoints.push({ x: e.clientX, y: e.clientY });
   if (snapThrottle) { clearTimeout(snapThrottle); snapThrottle = null; }
-  enqueuePaintSnap({ x: e.clientX, y: e.clientY });
-  finishStrokePipeline();
+
+  if (isStrokeTapGesture(paintPoints)) {
+    resetSnapQueueForNewStroke();
+    const pt = { x: e.clientX, y: e.clientY };
+    const cand = findBestCandidate(pt, {});
+    if (cand && !selectedSegments.has(cand.featureId)) {
+      const gc = (cand.vertexLLA && cand.vertexLLB)
+        ? [(cand.vertexLLA[0] + cand.vertexLLB[0]) / 2, (cand.vertexLLA[1] + cand.vertexLLB[1]) / 2]
+        : null;
+      const ep = (cand.lineEndpointA && cand.lineEndpointB)
+        ? [cand.lineEndpointA, cand.lineEndpointB]
+        : null;
+      commitSegment(cand.featureId, cand.props, cand.edge, gc, ep);
+      idsTouchedThisStroke.add(cand.featureId);
+      strokeBatchesHistory.push([cand.featureId]);
+    }
+  } else {
+    enqueuePaintSnap({ x: e.clientX, y: e.clientY });
+    finishStrokePipeline();
+  }
   fadeStroke();
 });
 
@@ -2535,6 +1236,135 @@ function fadeStroke() {
     drawSpline(paintPoints, alpha);
   }, 30);
 }
+
+function drawSplineUnpaint(pts, alpha) {
+  if (pts.length < 2) return;
+  unpaintCtx.clearRect(0, 0, unpaintCanvas.width, unpaintCanvas.height);
+  unpaintCtx.globalAlpha = alpha;
+  unpaintCtx.strokeStyle = '#dc2626';
+  unpaintCtx.lineWidth   = 4;
+  unpaintCtx.lineJoin    = 'round';
+  unpaintCtx.lineCap     = 'round';
+  unpaintCtx.beginPath();
+  unpaintCtx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    unpaintCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+  }
+  unpaintCtx.stroke();
+  unpaintCtx.globalAlpha = 1;
+}
+
+function cancelUnpaintFade() {
+  if (unpaintFadeAnim) { clearInterval(unpaintFadeAnim); unpaintFadeAnim = null; }
+  unpaintCtx.clearRect(0, 0, unpaintCanvas.width, unpaintCanvas.height);
+}
+
+function fadeUnpaintStroke() {
+  if (unpaintPoints.length < 2) return;
+  let alpha = 0.7;
+  unpaintFadeAnim = setInterval(() => {
+    alpha -= 0.07;
+    if (alpha <= 0) {
+      clearInterval(unpaintFadeAnim);
+      unpaintFadeAnim = null;
+      unpaintCtx.clearRect(0, 0, unpaintCanvas.width, unpaintCanvas.height);
+      return;
+    }
+    drawSplineUnpaint(unpaintPoints, alpha);
+  }, 30);
+}
+
+function tryUnpaintTapAt(clientX, clientY) {
+  const bbox = [[clientX - 14, clientY - 14], [clientX + 14, clientY + 14]];
+  let feats = [];
+  try {
+    feats = map.queryRenderedFeatures(bbox, { layers: ['road-score'] });
+  } catch (err) {
+    return false;
+  }
+  for (let fi = 0; fi < feats.length; fi++) {
+    const f = feats[fi];
+    const fid = f.id !== undefined ? f.id : f.properties && f.properties.ogc_fid;
+    if (fid != null && selectedSegments.has(fid)) {
+      removeSegmentSelection(fid);
+      return true;
+    }
+  }
+  return false;
+}
+
+function toggleUnpaintMode() {
+  if (paintMode) togglePaintMode();
+  if (unpaintMode && unpainting) {
+    unpainting = false;
+    if (unpaintSnapThrottle) { clearTimeout(unpaintSnapThrottle); unpaintSnapThrottle = null; }
+  }
+  unpaintMode = !unpaintMode;
+  document.getElementById('unpaintBtn').classList.toggle('active', unpaintMode);
+  unpaintCanvas.style.pointerEvents = unpaintMode ? 'all' : 'none';
+  unpaintHint.classList.toggle('visible', unpaintMode);
+  if (unpaintMode) {
+    map.dragPan.disable();
+    map.scrollZoom.disable();
+    map.doubleClickZoom.disable();
+    map.touchZoomRotate.disable();
+    map.getCanvas().style.cursor = '';
+  } else {
+    cancelUnpaintFade();
+    if (!paintMode) {
+      map.dragPan.enable();
+      map.scrollZoom.enable();
+      map.doubleClickZoom.enable();
+      map.touchZoomRotate.enable();
+    }
+  }
+}
+
+unpaintCanvas.addEventListener('pointerdown', (e) => {
+  unpainting = true;
+  unpaintPoints = [{ x: e.clientX, y: e.clientY }];
+  unpaintCanvas.setPointerCapture(e.pointerId);
+  cancelUnpaintFade();
+});
+
+unpaintCanvas.addEventListener('pointermove', (e) => {
+  if (!unpainting) return;
+  unpaintPoints.push({ x: e.clientX, y: e.clientY });
+  drawSplineUnpaint(unpaintPoints, 0.72);
+  if (!unpaintSnapThrottle) {
+    const pt = { x: e.clientX, y: e.clientY };
+    unpaintSnapThrottle = setTimeout(() => {
+      eraseNearPaintPoint(pt);
+      unpaintSnapThrottle = null;
+    }, 50);
+  }
+});
+
+unpaintCanvas.addEventListener('pointerup', (e) => {
+  unpainting = false;
+  unpaintPoints.push({ x: e.clientX, y: e.clientY });
+  if (unpaintSnapThrottle) { clearTimeout(unpaintSnapThrottle); unpaintSnapThrottle = null; }
+  if (isStrokeTapGesture(unpaintPoints)) {
+    tryUnpaintTapAt(e.clientX, e.clientY);
+  } else {
+    eraseNearPaintPoint({ x: e.clientX, y: e.clientY });
+  }
+  fadeUnpaintStroke();
+});
+
+unpaintCanvas.addEventListener('pointercancel', () => {
+  unpainting = false;
+  if (unpaintSnapThrottle) { clearTimeout(unpaintSnapThrottle); unpaintSnapThrottle = null; }
+  fadeUnpaintStroke();
+});
 
 const MOMENTUM_SMOOTH = 0.25;
 const MIN_MOVE        = 12;
@@ -2665,7 +1495,9 @@ function findBestCandidate(pt, opts) {
             segNy: sdy / slen,
             edge: { ax: a.x, ay: a.y, bx: b.x, by: b.y },
             vertexLLA: [coords[i][0], coords[i][1]],
-            vertexLLB: [coords[i + 1][0], coords[i + 1][1]]
+            vertexLLB: [coords[i + 1][0], coords[i + 1][1]],
+            lineEndpointA: [coords[0][0], coords[0][1]],
+            lineEndpointB: [coords[coords.length - 1][0], coords[coords.length - 1][1]],
           };
         }
       }
@@ -2677,9 +1509,11 @@ function findBestCandidate(pt, opts) {
   return best;
 }
 
-function commitSegment(featureId, props, edge) {
+function commitSegment(featureId, props, edge, geoCenter, endpoints) {
   if (selectedSegments.has(featureId)) return;
   selectedSegments.set(featureId, props);
+  if (geoCenter) segmentGeoCenter.set(featureId, geoCenter);
+  if (endpoints) segmentEndpoints.set(featureId, endpoints);
   selectionHistory.push(featureId);
   idsTouchedThisStroke.add(featureId);
   if (strokeOrderedSegmentIds[strokeOrderedSegmentIds.length - 1] !== featureId) {
@@ -2694,7 +1528,13 @@ function commitSegment(featureId, props, edge) {
 }
 
 function commitFromQueueItem(item) {
-  commitSegment(item.featureId, item.props, item.edge);
+  const gc = (item.vertexLLA && item.vertexLLB)
+    ? [(item.vertexLLA[0] + item.vertexLLB[0]) / 2, (item.vertexLLA[1] + item.vertexLLB[1]) / 2]
+    : null;
+  const ep = (item.lineEndpointA && item.lineEndpointB)
+    ? [item.lineEndpointA, item.lineEndpointB]
+    : null;
+  commitSegment(item.featureId, item.props, item.edge, gc, ep);
 }
 
 function tryDrainSnapQueue() {
@@ -2769,7 +1609,11 @@ function enqueuePaintSnap(pt) {
     strokeIdx: paintPoints.length - 1,
     segNx: cand.segNx,
     segNy: cand.segNy,
-    edge: cand.edge
+    edge: cand.edge,
+    vertexLLA: cand.vertexLLA,
+    vertexLLB: cand.vertexLLB,
+    lineEndpointA: cand.lineEndpointA,
+    lineEndpointB: cand.lineEndpointB,
   });
 
   if (!selectedSegments.has(cand.featureId)) {
@@ -2889,12 +1733,15 @@ function finishStrokePipeline() {
    SELECTION STATE
 ════════════════════════════════════════════════════════ */
 const selectedSegments = new Map();
+const segmentGeoCenter  = new Map(); // ogc_fid -> [lng, lat] midpoint of best-matched edge
+const segmentEndpoints  = new Map(); // ogc_fid -> [[lngA,latA], [lngB,latB]] LineString endpoints
 
 function updateBadge() {
   const n = selectedSegments.size;
   const badge = document.getElementById('selection-badge');
   badge.style.display = n > 0 ? 'flex' : 'none';
-  document.getElementById('badge-count').textContent = `${n} segment${n !== 1 ? 's' : ''} selected`;
+  const nc = n > 0 ? buildContiguousSegments().length : 0;
+  document.getElementById('badge-count').textContent = `${nc} road${nc !== 1 ? 's' : ''} selected`;
   const undoBtn = document.getElementById('badge-undo');
   if (undoBtn) undoBtn.disabled = selectionHistory.length === 0;
   const us = document.getElementById('badge-undo-stroke');
@@ -2950,7 +1797,7 @@ function undoLastSegment() {
 }
 
 function clearSelection() {
-  if (refineMode) exitRefineMode(false);
+  if (unpaintMode) toggleUnpaintMode();
   resetSnapQueueForNewStroke();
   idsTouchedThisStroke.clear();
   strokeBatchesHistory.length = 0;
@@ -2964,6 +1811,8 @@ function clearSelection() {
     );
   });
   selectedSegments.clear();
+  segmentGeoCenter.clear();
+  segmentEndpoints.clear();
   updateBadge();
 }
 
@@ -2971,189 +1820,579 @@ document.addEventListener('keydown', (e) => {
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
 
-  if (refineMode && e.key === 'Escape') {
+  if (unpaintMode && e.key === 'Escape') {
     e.preventDefault();
-    exitRefineMode(true);
+    toggleUnpaintMode();
     return;
   }
 
   if (!(e.ctrlKey || e.metaKey)) return;
   if (e.key !== 'z' && e.key !== 'Z') return;
-  if (refineMode && refineUndoStack.length > 0) {
-    e.preventDefault();
-    refineUndoLast();
-    return;
-  }
   if (!selectionHistory.length) return;
   e.preventDefault();
   undoLastSegment();
 });
 
 /* ════════════════════════════════════════════════════════
-   SURVEY PANEL (LTS-focused; score_model tags payload for multi-model backends)
+   PER-SEGMENT SURVEY
 ════════════════════════════════════════════════════════ */
-const FEEDBACK_SCORE_MODEL = 'lts';
 
-let surveyRating         = null; /* optional 1–5 comfort */
-let surveyTime           = null;
-let surveyPerceivedLts   = null; /* 1–4, required */
-let surveyMapLtsCalib    = null; /* too_optimistic | about_right | too_pessimistic */
-let surveyTrafficVol     = null; /* low | medium | high, optional */
+const STRESS_FACTORS = [
+  'Motor traffic speed',
+  'Motor traffic volume',
+  'Number of motor lanes',
+  'Little separation from traffic',
+  'Intersections or crossings',
+  'Door zone or parking-adjacent',
+  'Bike lane or path blocked',
+  'Map bike facility did not match ground',
+];
 
-function parseLtsFromProps(p) {
-  const v = p && p.lts_level;
-  if (v === null || v === undefined || v === '') return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
+/* Survey state */
+let surveySegments   = [];  // [{ route_name, ogc_fids: [] }]
+let surveyCur        = 0;   // current contiguous segment index
+let surveyAnswers    = [];  // [{ lts_perceived, safety_rating, stress_factors }] per segment
+let surveyActiveFids = new Set();
+let surveyShowSummary = false;
 
-function computeSelectionLtsLevels() {
-  const set = new Set();
-  selectedSegments.forEach(p => {
-    const n = parseLtsFromProps(p);
-    if (n !== null) set.add(n);
-  });
-  return [...set].sort((a, b) => a - b);
-}
+/* Summary state */
+let sumTime        = null;
+let sumSat         = null;  // overall satisfaction 1–5
+let sumRideAgain   = null;  // yes / probably / no
+let sumTripPurpose = null;  // optional
 
-function updateSurveyLtsSummary() {
-  const el = document.getElementById('survey-lts-model-summary');
-  const levels = computeSelectionLtsLevels();
-  if (!levels.length) {
-    el.textContent = 'Map LTS: not available for every segment in this selection. You can still report how it felt and whether the map felt accurate.';
-    el.classList.add('survey-lts-summary--warn');
-    return;
+/* ── Route sequencer ─────────────────────────────────────────────────────────
+ *
+ * Guarantees neighbor-to-neighbor ordering that honours the user's original
+ * drawing direction, even after edits (intermediate segments added or removed).
+ *
+ * STEP 1 — Adjacency graph
+ *   Two segments are neighbours if any of their four endpoint-pair distances
+ *   is < ENDPOINT_THRESH degrees (~10 m).  Road-network intersection points
+ *   are nominally identical; the threshold absorbs floating-point drift.
+ *
+ * STEP 2 — Connected components, ordered by first paint event
+ *   Components are seeded from the unvisited segment with the lowest
+ *   paint-order index, so disconnected stretches appear in the order the user
+ *   first touched them.  Segment numbering is therefore continuous across
+ *   components: if component A ends at survey node 3, component B starts at 4.
+ *
+ * STEP 3 — Direction-preserving linear walk per component
+ *   a. Identify degree-1 nodes (the two ends of a linear route).
+ *   b. From the FIRST-PAINTED segment of the component, BFS outward until
+ *      we reach a degree-1 node.  That node becomes the walk's start point,
+ *      anchoring the counting direction to the side the user began drawing.
+ *      (Intermediate segments added in later strokes cannot shift the start.)
+ *   c. Greedy walk: at each step move to the unvisited neighbour with the
+ *      lowest paint-order index — this follows the original drawing direction
+ *      through turns and 90° bends.
+ *   d. Any segments the main walk couldn't reach (rare branches, or segments
+ *      lacking stored endpoint data) are appended in paint order at the end
+ *      of that component's path.
+ * ─────────────────────────────────────────────────────────────────────────── */
+const ENDPOINT_THRESH = 0.0001; // ~10 m at DC latitude
+
+function computeRouteSequence() {
+  const fids = [...selectedSegments.keys()];
+  if (fids.length <= 1) return fids;
+
+  // Paint-order lookup — lower index means painted earlier.
+  const paintIdx = new Map();
+  strokeOrderedSegmentIds.forEach((fid, i) => paintIdx.set(fid, i));
+  const paintOrder = (a, b) => (paintIdx.get(a) ?? 1e9) - (paintIdx.get(b) ?? 1e9);
+
+  // STEP 1 — Adjacency --------------------------------------------------------
+  const adj = new Map();
+  fids.forEach(fid => adj.set(fid, new Set()));
+
+  for (let i = 0; i < fids.length; i++) {
+    const epI = segmentEndpoints.get(fids[i]);
+    if (!epI) continue;
+    for (let j = i + 1; j < fids.length; j++) {
+      const epJ = segmentEndpoints.get(fids[j]);
+      if (!epJ) continue;
+      outer: for (const a of epI) {
+        for (const b of epJ) {
+          if (Math.hypot(a[0] - b[0], a[1] - b[1]) < ENDPOINT_THRESH) {
+            adj.get(fids[i]).add(fids[j]);
+            adj.get(fids[j]).add(fids[i]);
+            break outer;
+          }
+        }
+      }
+    }
   }
-  el.classList.remove('survey-lts-summary--warn');
-  const n = selectedSegments.size;
-  if (levels.length === 1) {
-    el.innerHTML = `<strong>Map model (LTS):</strong> all <strong>${n}</strong> segment(s) are colored as <strong>LTS ${levels[0]}</strong>.`;
+
+  // STEP 2 — Connected components in paint order ------------------------------
+  const visited = new Set();
+  const components = [];
+  const sortedByPaint = [...fids].sort(paintOrder);
+
+  for (const seed of sortedByPaint) {
+    if (visited.has(seed)) continue;
+    const comp = [];
+    const q = [seed];
+    visited.add(seed);
+    while (q.length) {
+      const cur = q.shift();
+      comp.push(cur);
+      for (const nb of adj.get(cur)) {
+        if (!visited.has(nb)) { visited.add(nb); q.push(nb); }
+      }
+    }
+    components.push(comp);
+  }
+
+  // STEP 3 — Direction-preserving walk per component -------------------------
+  const result = [];
+
+  for (const comp of components) {
+    if (comp.length === 1) { result.push(comp[0]); continue; }
+
+    // The first-painted segment anchors the counting direction.
+    const firstPainted = comp.reduce((a, b) => paintOrder(a, b) < 0 ? a : b);
+
+    // Route endpoints are degree-1 nodes (dead ends of a linear path).
+    const endNodes = comp.filter(fid => adj.get(fid).size === 1);
+
+    // BFS from firstPainted to find the nearest route endpoint.
+    // Choosing the closest endpoint rather than the lowest-paint-order one
+    // ensures we start from the same "side" the user began drawing, regardless
+    // of how many segments were added later in the opposite direction.
+    let start = firstPainted; // fallback for loops / all-branch graphs
+    if (endNodes.length > 0) {
+      const endSet  = new Set(endNodes);
+      const bfsQ    = [firstPainted];
+      const bfsSeen = new Set([firstPainted]);
+      bfsLoop: while (bfsQ.length) {
+        const cur = bfsQ.shift();
+        if (endSet.has(cur)) { start = cur; break bfsLoop; }
+        for (const nb of adj.get(cur)) {
+          if (!bfsSeen.has(nb)) { bfsSeen.add(nb); bfsQ.push(nb); }
+        }
+      }
+    }
+
+    // Greedy neighbor-to-neighbor walk from start.
+    // Tiebreak on paint order so the walk follows the original drawing direction.
+    const seen = new Set();
+    const path = [];
+    let cur = start;
+
+    while (cur != null) {
+      path.push(cur);
+      seen.add(cur);
+      const nexts = [...adj.get(cur)].filter(n => !seen.has(n));
+      cur = nexts.length ? nexts.reduce((a, b) => paintOrder(a, b) < 0 ? a : b) : null;
+    }
+
+    // Append segments the walk couldn't reach (branches / missing endpoint data).
+    comp.filter(fid => !seen.has(fid)).sort(paintOrder).forEach(fid => path.push(fid));
+
+    result.push(...path);
+  }
+
+  return result;
+}
+
+/* ── Build contiguous segments from sequenced selection ── */
+function buildContiguousSegments() {
+  const result = [];
+  let cur = null;
+  for (const fid of computeRouteSequence()) {
+    const props = selectedSegments.get(fid);
+    const rn = (props && props.route_name) || null;
+    if (!cur || cur.route_name !== rn) {
+      cur = { route_name: rn, ogc_fids: [] };
+      result.push(cur);
+    }
+    cur.ogc_fids.push(Number(fid));
+  }
+  return result;
+}
+
+/* ── Fly map to a set of ogc_fids ── */
+function fitMapToSegmentFids(fids) {
+  const centers = fids.map(id => segmentGeoCenter.get(id) || segmentGeoCenter.get(String(id))).filter(Boolean);
+  if (!centers.length) return;
+  let minLng = centers[0][0], maxLng = centers[0][0];
+  let minLat = centers[0][1], maxLat = centers[0][1];
+  for (const [lng, lat] of centers) {
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+  const lngPad = Math.max(0.0015, (maxLng - minLng) * 0.25);
+  const latPad = Math.max(0.0015, (maxLat - minLat) * 0.25);
+  const isMobile = window.innerWidth < 769;
+  // On mobile the map container is already top-50vh (survey sheet is below it),
+  // so no large bottom padding needed. On desktop the survey panel is a 380px
+  // right overlay, so push the visible area leftward.
+  map.fitBounds(
+    [[minLng - lngPad, minLat - latPad], [maxLng + lngPad, maxLat + latPad]],
+    {
+      padding: { top: 60, bottom: 24, left: 24, right: isMobile ? 24 : 395 },
+      maxZoom: 17,
+      duration: 600,
+    }
+  );
+}
+
+/* ── Feature-state: mark active survey segment cyan ── */
+function setSurveyActiveFeatureState(fids, active) {
+  for (const fid of fids) {
+    map.setFeatureState(
+      { source: 'segments', sourceLayer: 'update_score_v2', id: fid },
+      { surveyActive: active }
+    );
+  }
+}
+
+function activateSurveySegment(idx) {
+  setSurveyActiveFeatureState([...surveyActiveFids], false);
+  surveyActiveFids.clear();
+  const seg = surveySegments[idx];
+  if (!seg) return;
+  for (const fid of seg.ogc_fids) surveyActiveFids.add(fid);
+  setSurveyActiveFeatureState(seg.ogc_fids, true);
+  fitMapToSegmentFids(seg.ogc_fids);
+}
+
+/* ── Segment track ── */
+function buildTrack() {
+  const track = document.getElementById('ss-track');
+  track.innerHTML = '<div style="width:10px;flex-shrink:0"></div>';
+  const n = surveySegments.length;
+
+  for (let i = 0; i < n; i++) {
+    const ans = surveyAnswers[i];
+    const isDone = ans && (ans.lts_perceived != null || ans.safety_rating != null);
+    const isActive = i === surveyCur && !surveyShowSummary;
+    const st = isActive ? 'active' : isDone ? 'done' : 'pending';
+
+    const seg = document.createElement('div');
+    seg.className = 'ss-seg';
+    seg.onclick = () => { if (!trackDragged) jumpToSegment(i); };
+
+    const icon = st === 'done'
+      ? '&#10003;'
+      : `<span style="font-size:8px;font-weight:500;color:${st === 'active' ? '#fff' : '#b4b2a9'}">${i + 1}</span>`;
+
+    const name = surveySegments[i].route_name || `Segment ${i + 1}`;
+    seg.innerHTML = `
+      <div class="ss-node ${st}">${icon}</div>
+      <div class="ss-name-wrap">
+        <span class="ss-name ${st}" title="${name}">${name}</span>
+      </div>`;
+    track.appendChild(seg);
+
+    if (i < n - 1) {
+      const bar = document.createElement('div');
+      bar.className = 'ss-bar';
+      bar.style.background = isDone ? '#639922' : '#d3d1c7';
+      track.appendChild(bar);
+    }
+  }
+  const trailSpacer = document.createElement('div');
+  trailSpacer.style.cssText = 'width:10px;flex-shrink:0';
+  track.appendChild(trailSpacer);
+  scrollTrackToActive();
+  initTrackDrag();
+}
+
+let trackDragActive = false, trackDragX = 0, trackDragScroll = 0, trackDragged = false;
+function initTrackDrag() {
+  const el = document.getElementById('ss-track');
+  // No e.preventDefault() here — it suppresses click events. CSS user-select:none handles text selection.
+  el.onmousedown  = e => { trackDragActive = true; trackDragged = false; trackDragX = e.pageX; trackDragScroll = el.scrollLeft; el.classList.add('dragging'); };
+  el.ontouchstart = e => { trackDragActive = true; trackDragged = false; trackDragX = e.touches[0].pageX; trackDragScroll = el.scrollLeft; };
+  el.onmousemove  = e => { if (!trackDragActive) return; const dx = e.pageX - trackDragX; if (Math.abs(dx) > 4) trackDragged = true; el.scrollLeft = trackDragScroll - dx; };
+  el.ontouchmove  = e => { if (!trackDragActive) return; const dx = e.touches[0].pageX - trackDragX; if (Math.abs(dx) > 4) trackDragged = true; el.scrollLeft = trackDragScroll - dx; };
+  const end = () => { trackDragActive = false; el.classList.remove('dragging'); };
+  el.onmouseup = end; el.ontouchend = end;
+  document.addEventListener('mouseup', end);
+}
+
+function scrollTrackToActive() {
+  requestAnimationFrame(() => {
+    const track = document.getElementById('ss-track');
+    const active = track.querySelector('.ss-node.active');
+    if (!active) return;
+    const seg = active.closest('.ss-seg');
+    if (!seg) return;
+    const tR = track.getBoundingClientRect(), sR = seg.getBoundingClientRect();
+    track.scrollLeft += sR.left - tR.left - tR.width / 2 + sR.width / 2;
+  });
+}
+
+/* ── Question panel ── */
+function renderQuestion() {
+  const seg = surveySegments[surveyCur];
+  const ans = surveyAnswers[surveyCur];
+
+  document.getElementById('ss-q-road').textContent = seg.route_name || `Segment ${surveyCur + 1}`;
+  document.getElementById('ss-sub').textContent = seg.route_name || '';
+  document.getElementById('ss-prog').textContent = `${surveyCur + 1} / ${surveySegments.length}`;
+
+  /* LTS buttons */
+  document.querySelectorAll('#ss-lts-row .ss-lb').forEach(b => {
+    b.classList.toggle('sel', parseInt(b.dataset.lts) === (ans && ans.lts_perceived));
+  });
+
+  /* Safety buttons */
+  document.querySelectorAll('#ss-safety-row .ss-lb').forEach(b => {
+    b.classList.toggle('sel', parseInt(b.dataset.v) === (ans && ans.safety_rating));
+  });
+
+  /* Stress factors */
+  renderStressFactors(ans);
+  updateStressFactorsVisibility(ans && ans.lts_perceived);
+
+  /* Footer */
+  const isLast = surveyCur === surveySegments.length - 1;
+  const nextBtn = document.getElementById('ss-next-btn');
+  nextBtn.textContent = isLast ? 'Review summary' : 'Next segment';
+  nextBtn.classList.toggle('review', isLast);
+  nextBtn.classList.remove('finish');
+  document.getElementById('ss-back-btn').disabled = surveyCur === 0;
+}
+
+function renderStressFactors(ans) {
+  const grid = document.getElementById('ss-factors-grid');
+  const checked = new Set((ans && ans.stress_factors) || []);
+  grid.innerHTML = '';
+  STRESS_FACTORS.forEach(f => {
+    const isChecked = checked.has(f);
+    const label = document.createElement('label');
+    label.className = 'ss-check-item' + (isChecked ? ' checked' : '');
+    label.innerHTML = `<input type="checkbox" value="${f}"${isChecked ? ' checked' : ''}> ${f}`;
+    label.querySelector('input').addEventListener('change', e => {
+      label.classList.toggle('checked', e.target.checked);
+      const cur = surveyAnswers[surveyCur];
+      if (!cur.stress_factors) cur.stress_factors = [];
+      if (e.target.checked) { if (!cur.stress_factors.includes(f)) cur.stress_factors.push(f); }
+      else { cur.stress_factors = cur.stress_factors.filter(x => x !== f); }
+    });
+    grid.appendChild(label);
+  });
+}
+
+function updateStressFactorsVisibility(lts) {
+  document.getElementById('ss-factors').classList.toggle('visible', lts >= 3);
+}
+
+/* ── Segment question handlers ── */
+function toggleLtsInfo() {
+  document.getElementById('ss-lts-info-panel').classList.toggle('open');
+}
+
+function setSegLts(val) {
+  surveyAnswers[surveyCur].lts_perceived = val;
+  document.querySelectorAll('#ss-lts-row .ss-lb').forEach(b => b.classList.toggle('sel', parseInt(b.dataset.lts) === val));
+  updateStressFactorsVisibility(val);
+  if (val < 3) surveyAnswers[surveyCur].stress_factors = [];
+  buildTrack();
+}
+
+function setSegSafety(val) {
+  surveyAnswers[surveyCur].safety_rating = val;
+  document.querySelectorAll('#ss-safety-row .ss-lb').forEach(b => b.classList.toggle('sel', parseInt(b.dataset.v) === val));
+  buildTrack();
+}
+
+/* ── Navigation ── */
+function jumpToSegment(idx) {
+  if (idx === surveyCur && !surveyShowSummary) return;
+  surveyShowSummary = false;
+  showSegmentPanel();
+  surveyCur = idx;
+  activateSurveySegment(idx);
+  buildTrack();
+  renderQuestion();
+}
+
+function segNext() {
+  if (surveyCur < surveySegments.length - 1) {
+    surveyCur++;
+    activateSurveySegment(surveyCur);
+    buildTrack();
+    renderQuestion();
   } else {
-    el.innerHTML = `<strong>Map model (LTS):</strong> from <strong>LTS ${levels[0]}</strong> to <strong>LTS ${levels[levels.length - 1]}</strong> across <strong>${n}</strong> segment(s). Use one consistent lens (whole route or worst part).`;
+    goToSummary();
   }
 }
 
+function segBack() {
+  if (surveyCur > 0) {
+    surveyCur--;
+    activateSurveySegment(surveyCur);
+    buildTrack();
+    renderQuestion();
+  }
+}
+
+function goToSummary() {
+  surveyShowSummary = true;
+  setSurveyActiveFeatureState([...surveyActiveFids], false);
+  surveyActiveFids.clear();
+  showSummaryPanel();
+  buildTrack();
+}
+
+function summaryBack() {
+  surveyShowSummary = false;
+  showSegmentPanel();
+  activateSurveySegment(surveyCur);
+  buildTrack();
+  renderQuestion();
+}
+
+function showSegmentPanel() {
+  document.getElementById('ss-q-area').style.display = 'flex';
+  document.getElementById('ss-footer').style.display = 'flex';
+  document.getElementById('ss-summary').classList.remove('visible');
+  document.getElementById('ss-confirm').classList.remove('visible');
+  document.getElementById('ss-track-outer').style.display = 'block';
+}
+
+function showSummaryPanel() {
+  document.getElementById('ss-q-area').style.display = 'none';
+  document.getElementById('ss-footer').style.display = 'none';
+  document.getElementById('ss-track-outer').style.display = 'none';
+  document.getElementById('ss-summary').classList.add('visible');
+  document.getElementById('ss-confirm').classList.remove('visible');
+}
+
+/* ── Summary handlers ── */
+function setSumTime(v) {
+  sumTime = v;
+  document.querySelectorAll('.ss-time-btn').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
+  document.getElementById('ss-req-time').classList.remove('error');
+}
+function setSumSat(v) {
+  sumSat = v;
+  document.querySelectorAll('#ss-sat-row .ss-lb').forEach(b => b.classList.toggle('sel', parseInt(b.dataset.v) === v));
+  document.getElementById('ss-req-sat').classList.remove('error');
+}
+function setSumAgain(v) {
+  sumRideAgain = v;
+  document.querySelectorAll('#ss-req-again .ss-tvol-btn').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
+  document.getElementById('ss-req-again').classList.remove('error');
+}
+function setSumPurpose(v) {
+  sumTripPurpose = v;
+  document.querySelectorAll('#ss-purpose-grid .ss-time-btn').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
+}
+
+function validateSummary() {
+  let ok = true;
+  [['ss-req-time', sumTime], ['ss-req-sat', sumSat], ['ss-req-again', sumRideAgain]].forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (!val) { el.classList.add('error'); ok = false; }
+    else       { el.classList.remove('error'); }
+  });
+  if (!ok) {
+    const firstErr = document.querySelector('.ss-req-block.error');
+    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  return ok;
+}
+
+/* ── Open / close ── */
 function openSurveyPanel() {
-  if (refineMode) exitRefineMode(false);
-  document.getElementById('survey-seg-count').textContent = selectedSegments.size;
-  document.getElementById('survey-panel').classList.add('open');
-  // Reset form state
-  surveyRating = null;
-  surveyTime = null;
-  surveyPerceivedLts = null;
-  surveyMapLtsCalib = null;
-  surveyTrafficVol = null;
-  document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('#time-grid .time-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('.traffic-vol-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('.lts-pick-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('.map-cal-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('.check-item input').forEach(cb => { cb.checked = false; cb.closest('.check-item').classList.remove('checked'); });
-  document.getElementById('survey-comments').value = '';
-  document.getElementById('survey-submit').disabled = true;
-  document.getElementById('survey-form-body').style.display = 'flex';
-  document.getElementById('survey-confirm').style.display = 'none';
-  updateSurveyLtsSummary();
-  // Turn off paint mode while survey is open
+  if (unpaintMode) toggleUnpaintMode();
   if (paintMode) togglePaintMode();
+  if (strokeOrderedSegmentIds.length === 0) return;
+
+  surveySegments  = buildContiguousSegments();
+  surveyCur       = 0;
+  surveyAnswers   = surveySegments.map(() => ({ lts_perceived: null, safety_rating: null, stress_factors: [] }));
+  surveyActiveFids.clear();
+  surveyShowSummary = false;
+  sumTime = null; sumSat = null; sumRideAgain = null; sumTripPurpose = null;
+
+  /* Reset summary UI */
+  document.querySelectorAll('.ss-time-btn,.ss-tvol-btn,.ss-lb').forEach(b => b.classList.remove('sel'));
+  document.querySelectorAll('.ss-req-block').forEach(el => el.classList.remove('error'));
+  document.getElementById('ss-comments').value = '';
+
+  /* Reset submit button and confirmation screen from any prior submission */
+  const submitBtn = document.getElementById('ss-submit-btn');
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Submit';
+  document.getElementById('ss-confirm').classList.remove('visible');
+
+  showSegmentPanel();
+  buildTrack();
+  renderQuestion();
+
+  document.getElementById('survey-sheet').classList.add('open');
+  document.body.classList.add('survey-active');
+  // Resize map now that mobile CSS has shrunk its container to top-50vh,
+  // then wait for the 0.3s CSS transition before flying to segment 0.
+  map.resize();
+  setTimeout(() => activateSurveySegment(0), 320);
 }
 
-function closeSurveyPanel() {
-  document.getElementById('survey-panel').classList.remove('open');
+function closeSurveySheet() {
+  setSurveyActiveFeatureState([...surveyActiveFids], false);
+  surveyActiveFids.clear();
+  document.getElementById('survey-sheet').classList.remove('open');
+  document.body.classList.remove('survey-active');
 }
 
-function setRating(val) {
-  surveyRating = val;
-  document.querySelectorAll('.rating-btn').forEach(b => {
-    b.classList.toggle('selected', parseInt(b.dataset.val, 10) === val);
-  });
-  validateSurvey();
-}
+/* ── Submit ── */
+async function submitSurvey() {
+  if (!validateSummary()) return;
 
-function setTime(val) {
-  surveyTime = val;
-  document.querySelectorAll('#time-grid .time-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.val === val);
-  });
-  validateSurvey();
-}
-
-function setPerceivedLts(val) {
-  surveyPerceivedLts = val;
-  document.querySelectorAll('.lts-pick-btn').forEach(b => {
-    b.classList.toggle('selected', parseInt(b.dataset.lts, 10) === val);
-  });
-  validateSurvey();
-}
-
-function setMapLtsCalib(val) {
-  surveyMapLtsCalib = val;
-  document.querySelectorAll('.map-cal-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.cal === val);
-  });
-  validateSurvey();
-}
-
-function setTrafficVol(val) {
-  surveyTrafficVol = val;
-  document.querySelectorAll('.traffic-vol-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.val === val);
-  });
-  validateSurvey();
-}
-
-// Sync checked visual state on checkbox change
-document.querySelectorAll('.check-item input').forEach(cb => {
-  cb.addEventListener('change', () => {
-    cb.closest('.check-item').classList.toggle('checked', cb.checked);
-  });
-});
-
-function validateSurvey() {
-  const ok = surveyPerceivedLts != null && surveyMapLtsCalib != null && surveyTime != null;
-  document.getElementById('survey-submit').disabled = !ok;
-}
-
-function submitFeedback() {
-  const factors = [...document.querySelectorAll('.check-item input:checked')].map(cb => cb.value);
-  const selectionLtsLevels = computeSelectionLtsLevels();
   const payload = {
-    score_model: FEEDBACK_SCORE_MODEL,
-    segments: [...selectedSegments.keys()],
-    segment_data: [...selectedSegments.values()].map(p => ({
-      ogc_fid: p.ogc_fid,
-      route_name: p.route_name,
-      score: p.user_score,
-      lts_level: parseLtsFromProps(p),
-      bike_facility_type: p.bike_facility_type ?? null,
-      speed_limit_raw: p.speed_limit_raw ?? null,
-      num_lanes_raw: p.num_lanes_raw ?? null
+    route_ogc_fids: strokeOrderedSegmentIds.map(Number),
+    contiguous_segments: surveySegments.map((seg, i) => ({
+      sequence_index: i,
+      route_name: seg.route_name,
+      ogc_fids: seg.ogc_fids,
+      lts_perceived: surveyAnswers[i].lts_perceived,
+      safety_rating: surveyAnswers[i].safety_rating,
+      stress_factors: (surveyAnswers[i].stress_factors && surveyAnswers[i].stress_factors.length)
+        ? surveyAnswers[i].stress_factors : null,
     })),
-    selection_lts_levels: selectionLtsLevels,
-    perceived_lts: surveyPerceivedLts,
-    map_lts_calibration: surveyMapLtsCalib,
-    time_of_day: surveyTime,
-    perceived_motor_traffic: surveyTrafficVol,
-    safety_rating: surveyRating,
-    factors,
-    comments: document.getElementById('survey-comments').value.trim(),
-    submitted_at: new Date().toISOString()
+    time_of_day:          sumTime,
+    overall_satisfaction: sumSat,
+    would_ride_again:     sumRideAgain,
+    trip_purpose:         sumTripPurpose,
+    comments:             document.getElementById('ss-comments').value.trim() || null,
   };
 
-  console.log('%c📍 Feedback payload', 'font-size:14px;font-weight:bold;color:#1d4ed8');
-  console.log(payload);
+  const btn = document.getElementById('ss-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
 
-  // Show confirmation
-  document.getElementById('survey-form-body').style.display = 'none';
-  const confirm = document.getElementById('survey-confirm');
-  confirm.style.display = 'flex';
-  document.getElementById('confirm-count').textContent = payload.segments.length;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch('http://localhost:8000/api/submissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log('Submission accepted:', data.submission_id);
+  } catch (err) {
+    clearTimeout(timer);
+    console.error('Submission error:', err);
+  }
+  // Always show the thank-you screen regardless of API result
+  document.getElementById('ss-summary').classList.remove('visible');
+  document.getElementById('ss-confirm').classList.add('visible');
 }
 
-function resetAfterSubmit() {
-  closeSurveyPanel();
+function resetAfterSurveySubmit() {
+  closeSurveySheet();
   clearSelection();
-  document.getElementById('survey-confirm').style.display = 'none';
 }
 </script>
 </body>
