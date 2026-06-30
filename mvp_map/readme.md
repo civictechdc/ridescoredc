@@ -1,5 +1,7 @@
 # Interactive DC Bike Safety Map
 
+**4/20/2026 Update: Incorporated Level of Traffic Stress as a default method. See the LTS folder for more information**
+
 This project creates a preliminary interactive bike safety map for the streets of Washington DC. You can explore it [here](http://161.35.142.176/). It does the following:
 * pulls [road](https://opendata.dc.gov/datasets/DCGIS::roadway-block/about) and [crash](https://opendata.dc.gov/datasets/crashes-in-dc/about) data from the Open Data DC portal.
 * process them and create bike safety factors and a default ridescore
@@ -12,9 +14,9 @@ This project creates a preliminary interactive bike safety map for the streets o
 
 The map uses [road](https://opendata.dc.gov/datasets/DCGIS::roadway-block/about) and [crash](https://opendata.dc.gov/datasets/crashes-in-dc/about) data from the Open Data DC portal. The road data are simplified and cleaned up (see jupyter notebook for details). For the crash data, we only use crashes that resulted in a bicyclist fatality or injury from the last 5 years.
 
-## Safety score and interactive factors
+## Bespoke safety score and interactive factors
 
-The LTS and ridescore build on 01_lts_osm_elia_v2.ipynb.
+The modified LTS and ridescore build on 01_lts_osm_elia_v2.ipynb.
 
 We use our own, modified level of traffic stress (LTS) calculator.
 
@@ -25,7 +27,7 @@ We use our own, modified level of traffic stress (LTS) calculator.
       <th>Number of lanes</th>
       <th>Speed limit</th>
       <th>Road function</th>
-      <th>LTS</th>
+      <th>Level</th>
     </tr>
     <tr style="background-color: #a4f1b6;">
       <td>Protected track</td>
@@ -70,7 +72,7 @@ We use our own, modified level of traffic stress (LTS) calculator.
 
 We then use it to create our own road safety score (the default on the website). It has 3 components:
 
-1) LTS levels are translated into the score using the following dictionary: {1:100, 2:75, 3:40, 4:10, none = 10}
+1) Levels are translated into the score using the following dictionary: {1:100, 2:75, 3:40, 4:10, none = 10}
 2) Type of bike lane is translated into a score using the following: {"protected_track":10, "buffered_lane":5, "painted_lane":3, "none":0}
 3) In short, the number of crashes is normalized to 100 \* (1- num_crash/95th_percentile of crashes).
 
@@ -107,8 +109,9 @@ BEGIN
         64,
         true
       ) AS geom,
-      (ridescore_v1*(query_params->>'i_ridescore')::int + speedlimit_score*(query_params->>'i_speedlimit')::int +
-num_lanes_score*(query_params->>'i_numlanes')::int+ facility_score*(query_params->>'i_facility')::int+ function_score*(query_params->>'i_function')::int+ road_width_score*(query_params->>'i_roadwidth')::int+ pavement_condition_score*(query_params->>'i_pavement')::int) / ((query_params->>'i_ridescore')::int + (query_params->>'i_speedlimit')::int+ (query_params->>'i_numlanes')::int+ (query_params->>'i_facility')::int+ (query_params->>'i_function')::int+ (query_params->>'i_roadwidth')::int+ (query_params->>'i_pavement')::int) AS user_score,
+      (ridescore_v1*(query_params->>'i_ridescore')::int + lts_100*(query_params->>'i_lts_original')::int + speedlimit_score*(query_params->>'i_speedlimit')::int +
+num_lanes_score*(query_params->>'i_numlanes')::int+ facility_score*(query_params->>'i_facility')::int+ function_score*(query_params->>'i_function')::int+ road_width_score*(query_params->>'i_roadwidth')::int+ pavement_condition_score*(query_params->>'i_pavement')::int) / ((query_params->>'i_ridescore')::int + (query_params->>'i_lts_original')::int + (query_params->>'i_speedlimit')::int+ (query_params->>'i_numlanes')::int+ (query_params->>'i_facility')::int+ (query_params->>'i_function')::int+ (query_params->>'i_roadwidth')::int+ (query_params->>'i_pavement')::int) AS user_score,
+	seg_id,
 	route_name,
 	bike_facility_type,
 	function,
@@ -117,6 +120,7 @@ num_lanes_score*(query_params->>'i_numlanes')::int+ facility_score*(query_params
 	parking_presence,
 	pavement_condition,
 	ridescore_v1,
+	original_lts,
 	road_width,
 	speed_limit_raw	
     FROM ridescoredc
@@ -128,6 +132,7 @@ num_lanes_score*(query_params->>'i_numlanes')::int+ facility_score*(query_params
   RETURN mvt;
 END
 $$ LANGUAGE plpgsql STABLE STRICT PARALLEL SAFE;
+
 
 ```
 ## Backend and Frontend setup instructions (with DigitalOcean Droplet)
