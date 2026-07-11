@@ -1,9 +1,0 @@
-postgres:
-  connection_string: ${DATABASE_URL}
-  auto_publish:
-    tables:
-      from_schemas:
-        - public
-    functions:
-      from_schemas:
-        - public
