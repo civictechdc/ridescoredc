@@ -11,6 +11,7 @@ A community-built pipeline and map that scores the bike-safety/comfort of DC str
 - **Layers** (JSON): Toggleable map layers (ranking, crash history, number of car lanes, etc.).
 - **Web**: A simple Leaflet/MapLibre web app for exploration.
 - **Project Plan/Meeting Notes**: View link [here](https://docs.google.com/document/d/1AsSjS07xshxVOjvKomdz90E6jUUXW7Dy5Z89CkY_dj4/edit?usp=sharing)
+- **Product Backlog**: View link [here](https://docs.google.com/spreadsheets/d/1HD21GBhzOyXZhXEjCsbTbjXAxpHijbrWPI9UQ7EEjQQ/edit?gid=0#gid=0)
 
 ## Quickstart (local)
 TBD
