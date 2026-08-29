@@ -1,6 +1,8 @@
 [submodule "ridescoredc-models"]
 	path = ridescoredc-models
 	url = https://github.com/civictechdc/ridescoredc-models
+	branch = develop
 [submodule "ridescoredc-website"]
 	path = ridescoredc-website
 	url = https://github.com/civictechdc/ridescoredc-website
+	branch = develop
