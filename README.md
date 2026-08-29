@@ -47,3 +47,6 @@ flowchart TD
   end
   G --> CI
 ```
+<br><br>
+If you are in this monorepo, please run the following to update the submodules: 
+`git submodule update --remote`
